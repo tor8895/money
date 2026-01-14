@@ -302,24 +302,27 @@
             pBox.classList.remove('bg-danger', 'bg-warning', 'bg-success');
             pRate.classList.remove('text-green', 'text-red', 'text-blue');
 
+          // --- V3.3 修改：提早警示邏輯 ---
             if (state.pledgeLoan > 0) {
                 const rate = (state.pledgeCol / state.pledgeLoan) * 100;
                 pRate.innerText = rate.toFixed(2) + "%";
                 
-                if (rate < 130) {
-                    // 危險：全紅背景 + 白字
+                if (rate < 160) {
+                    // 【危險區】 低於 160% -> 紅色全版警告 (原本是 130)
+                    // 這時候還沒斷頭，但已進入高度危險，需立即處理
                     pBox.classList.add("bg-danger");
-                    pStatus.innerText = "⚠️ 追繳危險!";
+                    pStatus.innerText = "⛔ 危險 (<160%)";
                     pIcon.innerText = "🚨";
-                } else if (rate < 160) {
-                    // 警戒：全黃背景 + 黑字
+                } else if (rate < 180) {
+                    // 【警戒區】 160% ~ 180% -> 黃色警告 (原本是 160)
+                    // 還有緩衝，但要開始準備現金或停止借款
                     pBox.classList.add("bg-warning");
-                    pStatus.innerText = "⚡ 注意水位";
+                    pStatus.innerText = "⚡ 警戒 (<180%)";
                     pIcon.innerText = "⚠️";
                 } else {
-                    // 安全：白背景 + 綠色側條 + 綠字
+                    // 【安全區】 高於 180% -> 綠色
                     pBox.classList.add("bg-success");
-                    pStatus.innerText = "✅ 安全";
+                    pStatus.innerText = "✅ 安全 (>180%)";
                     pRate.classList.add('text-green');
                     pIcon.innerText = "🏦";
                 }
