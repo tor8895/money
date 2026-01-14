@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產戰情室</title>
+    <title>資產戰情室 V3.2</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -16,10 +16,11 @@
         :root {
             --primary: #007aff;
             --success: #34c759;
-            --danger: #ff3b30;
-            --warning: #ffcc00;
-            --bg: #f2f2f7;
+            --danger: #dc3545; /* 改用更鮮豔的警示紅 */
+            --warning: #ffc107; /* 改用更鮮豔的警示黃 */
+            --bg: #e8ebf2; /* V3.2 修改：背景改深一點的冷灰色，增加對比 */
             --card-bg: #ffffff;
+            --text-gray: #666;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -28,52 +29,90 @@
             padding: 15px;
             color: #333;
             padding-bottom: 50px;
-            user-select: none; /* 防止App操作時選取文字 */
+            user-select: none;
         }
         
+        /* --- 通用卡片樣式 --- */
+        /* V3.2 修改：增加陰影深度，讓卡片更立體明顯 */
+        .stat-card, .control-group, .pledge-box {
+            background: var(--card-bg);
+            border-radius: 16px; /* 圓角加大一點更現代 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            transition: all 0.3s ease;
+        }
+
         /* --- 儀表板區域 --- */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .stat-card { padding: 15px; text-align: center; }
         .stat-card.full-width { grid-column: span 2; }
-        .stat-label { font-size: 0.85rem; color: #8e8e93; margin-bottom: 5px; }
-        .stat-value { font-size: 1.2rem; font-weight: 700; color: #1c1c1e; }
-        .stat-sub { font-size: 0.75rem; color: #8e8e93; margin-top: 2px; }
+        .stat-label { font-size: 0.85rem; color: #8e8e93; margin-bottom: 5px; font-weight: 500; }
+        .stat-value { font-size: 1.3rem; font-weight: 800; color: #1c1c1e; }
+        .stat-sub { font-size: 0.75rem; color: #8e8e93; margin-top: 4px; }
         
         /* 顏色與狀態 */
-        .text-green { color: var(--success); }
-        .text-red { color: var(--danger); }
-        .text-blue { color: var(--primary); }
-        .bg-danger { background-color: #ffe5e5; }
-        .bg-warning { background-color: #fff9e6; }
-        .bg-success { background-color: #e8f5e9; }
-
-        /* --- 質押專區 --- */
+        .text-green { color: var(--success) !important; }
+        .text-red { color: var(--danger) !important; }
+        .text-blue { color: var(--primary) !important; }
+        
+        /* --- V3.2 重點修改：質押專區 --- */
         .pledge-box {
-            background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 20px;
-            border-left: 5px solid var(--warning); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 10px solid #ccc; /* 預設灰色條 */
         }
-        .pledge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .pledge-rate { font-size: 1.5rem; font-weight: 800; }
+        .pledge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .pledge-title { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 5px; }
+        .pledge-rate-area { display:flex; align-items:baseline; justify-content:center; gap:8px; margin-bottom:15px; }
+        .pledge-rate { font-size: 1.8rem; font-weight: 900; }
+        .pledge-details { display:grid; grid-template-columns:1fr 1fr; gap:15px; text-align:center; }
+        .pledge-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px; }
+        .pledge-val { font-weight: bold; font-size: 1.1rem; }
+        .loan-val { color: #d35400; }
+
+        /* V3.2 新增：質押強力警示狀態 (核彈級變色) */
+        /* 安全狀態 - 綠色側邊條 */
+        .pledge-box.bg-success {
+            border-left-color: var(--success);
+        }
+        /* 警戒狀態 - 全黃背景 */
+        .pledge-box.bg-warning {
+            background-color: var(--warning) !important;
+            border: none; /* 移除側邊條 */
+            color: #333; /* 文字深色 */
+        }
+        /* 危險狀態 - 全紅背景 + 白字 */
+        .pledge-box.bg-danger {
+            background-color: var(--danger) !important;
+            border: none;
+            color: white !important; /* 強制白字 */
+        }
+        /* 危險模式下的內部文字變色 */
+        .pledge-box.bg-danger .pledge-label, 
+        .pledge-box.bg-danger .loan-val,
+        .pledge-box.bg-danger .pledge-rate {
+            color: rgba(255,255,255,0.9) !important;
+        }
+
         
         /* --- 操作區 --- */
-        .section-title { font-size: 1rem; color: #6c6c70; margin: 20px 0 10px 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .control-group { background: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .control-item { padding: 15px; border-bottom: 1px solid #e5e5ea; }
+        .section-title { font-size: 0.95rem; color: #6c6c70; margin: 25px 0 10px 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .control-group { overflow: hidden; margin-bottom: 20px; }
+        .control-item { padding: 15px 20px; border-bottom: 1px solid #f0f0f5; }
         .control-item:last-child { border-bottom: none; }
-        .control-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 500; }
-        .current-val { color: var(--primary); font-weight: bold; }
+        .control-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1rem; font-weight: 600; }
+        .current-val { color: var(--primary); font-weight: bold; font-family: monospace; font-size: 1.1rem;}
         
         .input-row { display: flex; gap: 10px; }
         input[type="number"] {
-            flex: 1; padding: 10px; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 1rem;
-            background: #f2f2f7; -webkit-appearance: none;
+            flex: 1; padding: 12px; border: 2px solid #e5e5ea; border-radius: 10px; font-size: 1rem;
+            background: #f8f8fa; -webkit-appearance: none; transition: all 0.2s;
         }
         input:focus { outline: none; border-color: var(--primary); background: #fff; }
         
-        button.btn-update { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: 600; cursor: pointer; }
-        button.btn-update:active { opacity: 0.7; }
-        .danger-zone { margin-top: 40px; text-align: center; }
-        .btn-reset { color: #ff3b30; background: none; border: 1px solid #ff3b30; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+        button.btn-update { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 18px; font-weight: 700; cursor: pointer; }
+        button.btn-update:active { opacity: 0.7; transform: scale(0.98); }
+        .danger-zone { margin-top: 50px; text-align: center; margin-bottom: 30px;}
+        .btn-reset { color: var(--danger); background: white; border: 2px solid var(--danger); padding: 8px 20px; border-radius: 25px; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -112,21 +151,23 @@
 
     <div class="pledge-box" id="pledgeBox">
         <div class="pledge-header">
-            <span style="font-weight:600; color:#d35400;">🏦 質押監控</span>
-            <span id="disp_pledgeStatus" style="font-size:0.8rem;">安全</span>
+            <div class="pledge-title">
+                <span id="pledgeIcon">🏦</span> 質押監控
+            </div>
+            <span id="disp_pledgeStatus" style="font-size:0.9rem; font-weight:bold;">未啟用</span>
         </div>
-        <div style="display:flex; align-items:baseline; justify-content:center; gap:5px; margin-bottom:10px;">
-            <span style="font-size:0.9rem; color:#666;">維持率</span>
-            <span class="pledge-rate" id="disp_maintRate">--%</span>
+        <div class="pledge-rate-area">
+            <span class="pledge-label" style="font-size:1rem;">維持率</span>
+            <span class="pledge-rate text-blue" id="disp_maintRate">--%</span>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; text-align:center;">
+        <div class="pledge-details">
             <div>
-                <div style="color:#666;">抵押品市值</div>
-                <div style="font-weight:bold;" id="disp_pledgeCollateral">0</div>
+                <div class="pledge-label">抵押品市值</div>
+                <div class="pledge-val" id="disp_pledgeCollateral">0</div>
             </div>
             <div>
-                <div style="color:#666;">借出金額</div>
-                <div style="font-weight:bold; color:#d35400;" id="disp_pledgeLoan">0</div>
+                <div class="pledge-label">借出金額</div>
+                <div class="pledge-val loan-val" id="disp_pledgeLoan">0</div>
             </div>
         </div>
     </div>
@@ -135,15 +176,15 @@
     <div class="control-group">
         <div class="control-item">
             <div class="control-header"><span>月薪</span><span class="current-val" id="val_salary">0</span></div>
-            <div class="input-row"><input type="number" id="in_salary" placeholder="輸入目前月薪"><button class="btn-update" onclick="updateSetting('salary', 'in_salary')">設定</button></div>
+            <div class="input-row"><input type="number" id="in_salary" placeholder="輸入目前月薪" inputmode="numeric"><button class="btn-update" onclick="updateSetting('salary', 'in_salary')">設定</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>每月定期定額</span><span class="current-val" id="val_dca">0</span></div>
-            <div class="input-row"><input type="number" id="in_dca" placeholder="每月投資金額"><button class="btn-update" onclick="updateSetting('dca', 'in_dca')">設定</button></div>
+            <div class="input-row"><input type="number" id="in_dca" placeholder="每月投資金額" inputmode="numeric"><button class="btn-update" onclick="updateSetting('dca', 'in_dca')">設定</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>每月貸款還款</span><span class="current-val" id="val_repay">0</span></div>
-            <div class="input-row"><input type="number" id="in_repay" placeholder="每月需繳本利和"><button class="btn-update" onclick="updateSetting('repay', 'in_repay')">設定</button></div>
+            <div class="input-row"><input type="number" id="in_repay" placeholder="每月需繳本利和" inputmode="numeric"><button class="btn-update" onclick="updateSetting('repay', 'in_repay')">設定</button></div>
         </div>
     </div>
 
@@ -151,19 +192,19 @@
     <div class="control-group">
         <div class="control-item">
             <div class="control-header"><span>手頭現金</span><span class="current-val" id="val_cash">0</span></div>
-            <div class="input-row"><input type="number" id="delta_cash" placeholder="增減金額"><button class="btn-update" onclick="updateAsset('cash', 'delta_cash')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_cash" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('cash', 'delta_cash')">更新</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>台股現貨 (1x)</span><span class="current-val" id="val_tw1x">0</span></div>
-            <div class="input-row"><input type="number" id="delta_tw1x" placeholder="增減金額"><button class="btn-update" onclick="updateAsset('tw1x', 'delta_tw1x')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_tw1x" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('tw1x', 'delta_tw1x')">更新</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>台股槓桿ETF (2x)</span><span class="current-val" id="val_tw2x">0</span></div>
-            <div class="input-row"><input type="number" id="delta_tw2x" placeholder="增減金額"><button class="btn-update" onclick="updateAsset('tw2x', 'delta_tw2x')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_tw2x" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('tw2x', 'delta_tw2x')">更新</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>美股/ETF (TWD)</span><span class="current-val" id="val_us">0</span></div>
-            <div class="input-row"><input type="number" id="delta_us" placeholder="台幣價值"><button class="btn-update" onclick="updateAsset('us', 'delta_us')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_us" placeholder="台幣價值" inputmode="decimal"><button class="btn-update" onclick="updateAsset('us', 'delta_us')">更新</button></div>
         </div>
     </div>
 
@@ -171,20 +212,20 @@
     <div class="control-group">
         <div class="control-item">
             <div class="control-header"><span>信貸/房貸本金餘額</span><span class="current-val text-red" id="val_loans">0</span></div>
-            <div class="input-row"><input type="number" id="delta_loans" placeholder="增減負債"><button class="btn-update" onclick="updateAsset('loans', 'delta_loans')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_loans" placeholder="增減負債" inputmode="decimal"><button class="btn-update" onclick="updateAsset('loans', 'delta_loans')">更新</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>質押-抵押品市值</span><span class="current-val" id="val_pledgeCol">0</span></div>
-            <div class="input-row"><input type="number" id="delta_pledgeCol" placeholder="增減市值"><button class="btn-update" onclick="updateAsset('pledgeCol', 'delta_pledgeCol')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_pledgeCol" placeholder="增減市值" inputmode="decimal"><button class="btn-update" onclick="updateAsset('pledgeCol', 'delta_pledgeCol')">更新</button></div>
         </div>
         <div class="control-item">
             <div class="control-header"><span>質押-借款金額</span><span class="current-val text-red" id="val_pledgeLoan">0</span></div>
-            <div class="input-row"><input type="number" id="delta_pledgeLoan" placeholder="增減借款"><button class="btn-update" onclick="updateAsset('pledgeLoan', 'delta_pledgeLoan')">更新</button></div>
+            <div class="input-row"><input type="number" id="delta_pledgeLoan" placeholder="增減借款" inputmode="decimal"><button class="btn-update" onclick="updateAsset('pledgeLoan', 'delta_pledgeLoan')">更新</button></div>
         </div>
     </div>
 
     <div class="danger-zone">
-        <button class="btn-reset" onclick="resetAll()">⚠️ 清除重來</button>
+        <button class="btn-reset" onclick="resetAll()">⚠️ 清除所有資料重來</button>
     </div>
 
     <script>
@@ -197,7 +238,7 @@
             });
         }
 
-        // --- 邏輯運算 (同 V3) ---
+        // --- 邏輯運算 (核心邏輯未變，僅配合新的 UI 更新方式) ---
         let state = { salary: 0, dca: 0, repay: 0, cash: 0, tw1x: 0, tw2x: 0, us: 0, loans: 0, pledgeCol: 0, pledgeLoan: 0 };
 
         function loadState() {
@@ -248,36 +289,50 @@
             document.getElementById('disp_totalLoan').innerText = fmt(state.loans);
             document.getElementById('disp_leverage').innerText = leverage.toFixed(2) + "x";
 
-            // 質押邏輯
+            // --- V3.2 修改：質押監控的變色邏輯 ---
             document.getElementById('disp_pledgeCollateral').innerText = fmt(state.pledgeCol);
             document.getElementById('disp_pledgeLoan').innerText = fmt(state.pledgeLoan);
             
             const pBox = document.getElementById('pledgeBox');
             const pStatus = document.getElementById('disp_pledgeStatus');
             const pRate = document.getElementById('disp_maintRate');
+            const pIcon = document.getElementById('pledgeIcon');
+
+            // 先移除所有狀態 class
+            pBox.classList.remove('bg-danger', 'bg-warning', 'bg-success');
+            pRate.classList.remove('text-green', 'text-red', 'text-blue');
 
             if (state.pledgeLoan > 0) {
                 const rate = (state.pledgeCol / state.pledgeLoan) * 100;
                 pRate.innerText = rate.toFixed(2) + "%";
-                pBox.className = "pledge-box"; 
+                
                 if (rate < 130) {
+                    // 危險：全紅背景 + 白字
                     pBox.classList.add("bg-danger");
-                    pStatus.innerText = "⚠️ 危險"; pStatus.style.color="red"; pRate.style.color="red";
+                    pStatus.innerText = "⚠️ 追繳危險!";
+                    pIcon.innerText = "🚨";
                 } else if (rate < 160) {
+                    // 警戒：全黃背景 + 黑字
                     pBox.classList.add("bg-warning");
-                    pStatus.innerText = "⚡ 警戒"; pStatus.style.color="#d35400"; pRate.style.color="#d35400";
+                    pStatus.innerText = "⚡ 注意水位";
+                    pIcon.innerText = "⚠️";
                 } else {
+                    // 安全：白背景 + 綠色側條 + 綠字
                     pBox.classList.add("bg-success");
-                    pStatus.innerText = "✅ 安全"; pStatus.style.color="green"; pRate.style.color="green";
+                    pStatus.innerText = "✅ 安全";
+                    pRate.classList.add('text-green');
+                    pIcon.innerText = "🏦";
                 }
             } else {
-                pRate.innerText = "--%"; pStatus.innerText = "無借款";
-                pBox.className = "pledge-box"; pRate.style.color="black"; pStatus.style.color="gray";
+                pRate.innerText = "--%"; 
+                pStatus.innerText = "未啟用";
+                pIcon.innerText = "🏦";
+                pRate.classList.add('text-blue');
             }
         }
 
         function resetAll() {
-            if(confirm("確定清除？")) { localStorage.removeItem('asset_tracker_v3'); location.reload(); }
+            if(confirm("確定要刪除所有資料重新開始嗎？這將無法復原。")) { localStorage.removeItem('asset_tracker_v3'); location.reload(); }
         }
         window.onload = loadState;
     </script>
