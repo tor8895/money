@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產槓桿記錄 V4.7</title>
+    <title>資產槓桿記錄 V4.8</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -95,7 +95,6 @@
         .price-input { width: 100px; text-align: right; padding: 8px; font-size: 1rem; }
         .pledge-input-group { display: flex; flex-direction: column; align-items: flex-end;}
         .pledge-desc { font-size: 0.75rem; color: #999; margin-top: 2px;}
-        
         .exchange-box { background: #f8f8fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e5ea; }
 
         /* 底部導航 */
@@ -113,7 +112,7 @@
 
     <div class="top-fixed-area">
         <div class="app-bar">
-            <div class="app-title">資產戰情室 V4.7</div>
+            <div class="app-title">資產槓桿記錄 V4.8</div>
             <button class="btn-privacy" onclick="togglePrivacy()">
                 <span id="eyeIcon">🙈</span>
             </button>
@@ -252,7 +251,6 @@
     </div>
 
     <div id="page-settings" class="page">
-        
         <div class="card">
             <div class="card-title">💱 換匯中心</div>
             <div class="exchange-box">
@@ -340,13 +338,17 @@
     </div>
 
     <script>
-        // 資料結構 V4.7: 新增 deductDay, remainingTerms, pmt (信貸專用), lastPaidMonth
         let data = { cashTwd: 0, cashUsd: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {}, exchangeRate: 32.5 };
         let isPrivacyMode = true; 
 
         window.onload = () => {
             if(localStorage.getItem('asset_v4')) {
                 let saved = JSON.parse(localStorage.getItem('asset_v4'));
+                if(saved.cash !== undefined) {
+                    saved.cashTwd = saved.cash;
+                    saved.cashUsd = 0;
+                    delete saved.cash;
+                }
                 if(!saved.prices) saved.prices = {};
                 if(!saved.pledgedShares) saved.pledgedShares = {};
                 if(!saved.exchangeRate) saved.exchangeRate = 32.5; 
@@ -358,7 +360,7 @@
             document.getElementById('settingExchangeRate').value = data.exchangeRate;
             document.getElementById('exchangeRateInput').value = data.exchangeRate;
             
-            checkLoanDeductions(); // 檢查是否需要自動扣款
+            checkLoanDeductions(); 
             updateUI();
         };
 
@@ -367,7 +369,7 @@
             updateUI();
         }
 
-        // --- 自動扣款邏輯 (V4.7 New) ---
+        // --- 自動扣款 ---
         function checkLoanDeductions() {
             let today = new Date();
             let currentMonthStr = `${today.getFullYear()}-${today.getMonth()+1}`;
@@ -375,13 +377,11 @@
             let deducted = false;
 
             data.loans.forEach(loan => {
-                // 如果有設定扣款日，且還有剩餘期數，且這個月還沒扣過
                 if(loan.deductDay && loan.remainingTerms > 0 && loan.lastPaidMonth !== currentMonthStr) {
                     if(currentDay >= loan.deductDay) {
-                        // 執行扣款
                         data.cashTwd -= loan.pmt;
                         loan.remainingTerms -= 1;
-                        loan.lastPaidMonth = currentMonthStr; // 標記本月已付
+                        loan.lastPaidMonth = currentMonthStr; 
                         deducted = true;
                     }
                 }
@@ -424,10 +424,8 @@
             return inv;
         }
 
-        // 信貸計算 (V4.7 改為依據剩餘期數動態顯示)
+        // PV函數：計算剩餘本金
         function calcRemainingPrincipal(loan) {
-            // PV函數：計算剩餘本金 (Estimate)
-            // PV = PMT * (1 - (1+r)^-n) / r
             if (loan.remainingTerms <= 0) return 0;
             let r = loan.rate / 100 / 12;
             let n = loan.remainingTerms;
@@ -461,6 +459,16 @@
             let qty = parseFloat(document.getElementById('stockQty').value);
             if(!symbol || !price || !qty) return alert('請填寫完整');
             
+            // --- V4.8 防呆：賣出檢查 ---
+            if (action === 'sell') {
+                let inv = getInventory();
+                let currentQty = (inv[symbol] && inv[symbol].qty) || 0;
+                if (currentQty < qty) {
+                    alert(`❌ 交易失敗：庫存不足！\n目前持有: ${currentQty} 股\n欲賣出: ${qty} 股`);
+                    return;
+                }
+            }
+
             let total = price * qty;
 
             if (type === 'us') {
@@ -503,14 +511,13 @@
             
             if(!principal || !term) return;
             
-            // 計算固定月付金 (PMT)
             let r = rate / 100 / 12;
             let pmt = Math.round(principal * (r * Math.pow(1+r, term)) / (Math.pow(1+r, term) - 1));
 
             data.cashTwd += principal; 
             data.loans.push({ 
                 id: Date.now(), type: 'credit', principal, rate, 
-                totalTerms: term, remainingTerms: term, // 紀錄剩餘期數
+                totalTerms: term, remainingTerms: term, 
                 pmt: pmt, deductDay: deductDay || null, 
                 lastPaidMonth: "" 
             });
@@ -536,7 +543,7 @@
                 else data.cashUsd += val;
                 
                 saveData();
-                document.getElementById(id).value = ''; // 清空輸入框
+                document.getElementById(id).value = ''; 
                 alert('餘額已更新');
             }
         }
@@ -562,7 +569,136 @@
             if(confirm('確定清除所有資料?')) { localStorage.removeItem('asset_v4'); location.reload(); }
         }
 
-        // --- Modal ---
+        // --- UI Update ---
+        function updateUI() {
+            document.getElementById('headerCashTwd').innerText = fmt(data.cashTwd);
+            document.getElementById('headerCashUsd').innerText = fmtUsd(data.cashUsd);
+
+            let inv = getInventory();
+            let listHtml = '';
+            let twVal = 0;
+            let usValUsd = 0; 
+            let totalCollateralVal = 0;
+
+            for(let sym in inv) {
+                if(inv[sym].qty > 0) {
+                    let marketPrice = data.prices[sym] || inv[sym].cost;
+                    let totalVal = marketPrice * inv[sym].qty;
+                    let costVal = inv[sym].cost * inv[sym].qty;
+                    let profit = totalVal - costVal;
+                    
+                    let currency = inv[sym].type === 'us' ? '$' : 'NT$';
+                    let displayVal = fmt(totalVal, true); 
+                    
+                    if(inv[sym].type === 'tw') {
+                        twVal += totalVal;
+                    } else {
+                        usValUsd += totalVal; 
+                        displayVal = `$${fmtUsd(totalVal)}`; 
+                    }
+                    
+                    let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
+                    let profitSign = profit >= 0 ? '+' : '';
+
+                    let pledgedQty = data.pledgedShares[sym] || 0;
+                    if(pledgedQty > 0) {
+                        let pledgeVal = pledgedQty * marketPrice;
+                        if(inv[sym].type === 'us') pledgeVal *= data.exchangeRate;
+                        totalCollateralVal += pledgeVal;
+                    }
+
+                    // --- V4.8 顯示優化：股數加粗 ---
+                    listHtml += `
+                    <div class="list-item">
+                        <div>
+                            <div class="item-main">
+                                ${sym} <span style="font-weight:400; font-size:0.9rem;">(${inv[sym].qty.toLocaleString()}股)</span>
+                                <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-us'}">${inv[sym].type.toUpperCase()}</span> 
+                                ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}
+                            </div>
+                            <div class="item-sub">
+                                均 ${currency}${inv[sym].cost.toFixed(2)} | 市價 <b>${marketPrice}</b>
+                            </div>
+                        </div>
+                        <div class="item-right">
+                            <div class="item-main">${displayVal}</div>
+                            <div class="profit-val ${profitClass}">${profitSign}${currency}${fmtUsd(profit)}</div>
+                        </div>
+                    </div>`;
+                }
+            }
+            document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
+            
+            let usValTwd = usValUsd * data.exchangeRate;
+            let cashUsdToTwd = data.cashUsd * data.exchangeRate;
+
+            document.getElementById('dashTwVal').innerText = fmt(twVal);
+            document.getElementById('dashUsVal').innerText = `$${fmtUsd(usValUsd)} / NT$${fmt(usValTwd)}`;
+            document.getElementById('disp_totalCollateralVal').innerText = fmt(totalCollateralVal);
+
+            let loanHtml = '';
+            let totalDebt = 0;
+            data.loans.forEach(l => {
+                let remainingPrincipal = calcRemainingPrincipal(l);
+                totalDebt += remainingPrincipal;
+                let dayText = l.deductDay ? `<span style="font-size:0.7rem;color:var(--primary);background:#eef;padding:2px 4px;border-radius:4px;">每月${l.deductDay}號扣</span>` : '';
+                
+                if(l.remainingTerms <= 0) {
+                    loanHtml += `<div class="list-item" style="opacity:0.5"><div><div class="item-main">信貸 (已結清)</div><div class="item-sub">本金 ${Math.round(l.principal/10000)}萬</div></div><div class="item-right"><div class="item-main text-green">結清</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+                } else {
+                    loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬 ${dayText}</div><div class="item-sub">剩 ${l.remainingTerms} 期 | 月繳 $${fmt(l.pmt)}</div></div>
+                        <div class="item-right"><div class="item-main text-red">-$${fmt(remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+                }
+            });
+            document.getElementById('creditList').innerHTML = loanHtml;
+
+            let pledgeHtml = '';
+            let totalPledgeLoan = 0;
+            data.pledges.forEach(p => {
+                let info = calcPledge(p);
+                totalPledgeLoan += p.amount;
+                let dateStyle = info.isExpireWarning ? 'color:red;font-weight:bold' : '';
+                pledgeHtml += `<div class="list-item"><div><div class="item-main">質押借款</div><div class="item-sub" style="${dateStyle}">${info.days}天 | 息 $${fmt(info.interest, false)}</div></div>
+                    <div class="item-right"><div class="item-main text-red">-$${fmt(p.amount)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('pledge', ${p.id})">刪除</button></div></div>`;
+            });
+            document.getElementById('pledgeList').innerHTML = pledgeHtml;
+            totalDebt += totalPledgeLoan;
+
+            let totalAssets = data.cashTwd + cashUsdToTwd + twVal + usValTwd;
+            let netWorth = totalAssets - totalDebt;
+            let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
+
+            document.getElementById('dashNetWorth').innerText = fmt(netWorth);
+            document.getElementById('dashAssets').innerText = fmt(totalAssets);
+            document.getElementById('dashDebts').innerText = fmt(totalDebt);
+            document.getElementById('dashLeverage').innerText = leverage + "x";
+
+            let statusBar = document.getElementById('stickyStatusBar');
+            let rateLabel = document.getElementById('statusLabel');
+            let rateDisplay = document.getElementById('disp_maintRate');
+            
+            if(totalPledgeLoan > 0) {
+                let rate = (totalCollateralVal / totalPledgeLoan) * 100;
+                rateDisplay.innerText = rate.toFixed(2) + "%";
+                statusBar.className = 'status-bar'; 
+                if(rate < 160) {
+                    statusBar.classList.add('status-danger');
+                    rateLabel.innerText = "🚨 追繳危險";
+                } else if (rate < 180) {
+                    statusBar.classList.add('status-warn');
+                    rateLabel.innerText = "⚠️ 注意水位";
+                } else {
+                    statusBar.classList.add('status-safe');
+                    rateLabel.innerText = "✅ 安全範圍";
+                }
+            } else {
+                rateDisplay.innerText = "--%";
+                rateLabel.innerText = "未啟用質押";
+                statusBar.className = 'status-bar status-neutral';
+            }
+        }
+
+        // --- Modals (Keep previous implementations) ---
         function openPriceModal() {
             let inv = getInventory();
             let container = document.getElementById('priceInputList');
@@ -625,130 +761,6 @@
         }
 
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        // --- UI Update ---
-        function updateUI() {
-            document.getElementById('headerCashTwd').innerText = fmt(data.cashTwd);
-            document.getElementById('headerCashUsd').innerText = fmtUsd(data.cashUsd);
-
-            let inv = getInventory();
-            let listHtml = '';
-            let twVal = 0;
-            let usValUsd = 0; 
-            let totalCollateralVal = 0;
-
-            for(let sym in inv) {
-                if(inv[sym].qty > 0) {
-                    let marketPrice = data.prices[sym] || inv[sym].cost;
-                    let totalVal = marketPrice * inv[sym].qty;
-                    let costVal = inv[sym].cost * inv[sym].qty;
-                    let profit = totalVal - costVal;
-                    
-                    let currency = inv[sym].type === 'us' ? '$' : 'NT$';
-                    let displayVal = fmt(totalVal, true); 
-                    
-                    if(inv[sym].type === 'tw') {
-                        twVal += totalVal;
-                    } else {
-                        usValUsd += totalVal; 
-                        displayVal = `$${fmtUsd(totalVal)}`; 
-                    }
-                    
-                    let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
-                    let profitSign = profit >= 0 ? '+' : '';
-
-                    let pledgedQty = data.pledgedShares[sym] || 0;
-                    if(pledgedQty > 0) {
-                        let pledgeVal = pledgedQty * marketPrice;
-                        if(inv[sym].type === 'us') pledgeVal *= data.exchangeRate;
-                        totalCollateralVal += pledgeVal;
-                    }
-
-                    listHtml += `
-                    <div class="list-item">
-                        <div>
-                            <div class="item-main">${sym} <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-us'}">${inv[sym].type.toUpperCase()}</span> ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}</div>
-                            <div class="item-sub">均 ${currency}${inv[sym].cost.toFixed(2)} | 現 <b>${currency}${marketPrice}</b></div>
-                        </div>
-                        <div class="item-right">
-                            <div class="item-main">${displayVal}</div>
-                            <div class="profit-val ${profitClass}">${profitSign}${currency}${fmtUsd(profit)}</div>
-                        </div>
-                    </div>`;
-                }
-            }
-            document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
-            
-            let usValTwd = usValUsd * data.exchangeRate;
-            let cashUsdToTwd = data.cashUsd * data.exchangeRate;
-
-            document.getElementById('dashTwVal').innerText = fmt(twVal);
-            document.getElementById('dashUsVal').innerText = `$${fmtUsd(usValUsd)} / NT$${fmt(usValTwd)}`;
-            document.getElementById('disp_totalCollateralVal').innerText = fmt(totalCollateralVal);
-
-            let loanHtml = '';
-            let totalDebt = 0;
-            // 顯示信貸列表 (包含自動扣款日與剩餘本金)
-            data.loans.forEach(l => {
-                let remainingPrincipal = calcRemainingPrincipal(l);
-                totalDebt += remainingPrincipal;
-                let dayText = l.deductDay ? `<span style="font-size:0.7rem;color:var(--primary);background:#eef;padding:2px 4px;border-radius:4px;">每月${l.deductDay}號扣</span>` : '';
-                
-                // 如果期數歸零，顯示已結清
-                if(l.remainingTerms <= 0) {
-                    loanHtml += `<div class="list-item" style="opacity:0.5"><div><div class="item-main">信貸 (已結清)</div><div class="item-sub">本金 ${Math.round(l.principal/10000)}萬</div></div><div class="item-right"><div class="item-main text-green">結清</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
-                } else {
-                    loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬 ${dayText}</div><div class="item-sub">剩 ${l.remainingTerms} 期 | 月繳 $${fmt(l.pmt)}</div></div>
-                        <div class="item-right"><div class="item-main text-red">-$${fmt(remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
-                }
-            });
-            document.getElementById('creditList').innerHTML = loanHtml;
-
-            let pledgeHtml = '';
-            let totalPledgeLoan = 0;
-            data.pledges.forEach(p => {
-                let info = calcPledge(p);
-                totalPledgeLoan += p.amount;
-                let dateStyle = info.isExpireWarning ? 'color:red;font-weight:bold' : '';
-                pledgeHtml += `<div class="list-item"><div><div class="item-main">質押借款</div><div class="item-sub" style="${dateStyle}">${info.days}天 | 息 $${fmt(info.interest, false)}</div></div>
-                    <div class="item-right"><div class="item-main text-red">-$${fmt(p.amount)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('pledge', ${p.id})">刪除</button></div></div>`;
-            });
-            document.getElementById('pledgeList').innerHTML = pledgeHtml;
-            totalDebt += totalPledgeLoan;
-
-            let totalAssets = data.cashTwd + cashUsdToTwd + twVal + usValTwd;
-            let netWorth = totalAssets - totalDebt;
-            let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
-
-            document.getElementById('dashNetWorth').innerText = fmt(netWorth);
-            document.getElementById('dashAssets').innerText = fmt(totalAssets);
-            document.getElementById('dashDebts').innerText = fmt(totalDebt);
-            document.getElementById('dashLeverage').innerText = leverage + "x";
-
-            let statusBar = document.getElementById('stickyStatusBar');
-            let rateLabel = document.getElementById('statusLabel');
-            let rateDisplay = document.getElementById('disp_maintRate');
-            
-            if(totalPledgeLoan > 0) {
-                let rate = (totalCollateralVal / totalPledgeLoan) * 100;
-                rateDisplay.innerText = rate.toFixed(2) + "%";
-                statusBar.className = 'status-bar'; 
-                if(rate < 160) {
-                    statusBar.classList.add('status-danger');
-                    rateLabel.innerText = "🚨 追繳危險";
-                } else if (rate < 180) {
-                    statusBar.classList.add('status-warn');
-                    rateLabel.innerText = "⚠️ 注意水位";
-                } else {
-                    statusBar.classList.add('status-safe');
-                    rateLabel.innerText = "✅ 安全範圍";
-                }
-            } else {
-                rateDisplay.innerText = "--%";
-                rateLabel.innerText = "未啟用質押";
-                statusBar.className = 'status-bar status-neutral';
-            }
-        }
 
         function switchPage(pageId, btn) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
