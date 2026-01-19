@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產槓桿記錄 V4.4</title>
+    <title>資產槓桿記錄 V4.6</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -14,7 +14,7 @@
         :root {
             --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ffcc00;
             --bg: #f2f2f7; --card-bg: #ffffff; --text-gray: #8e8e93; --text-dark: #1c1c1e;
-            --up: #ff3b30; --down: #34c759; --pledge-color: #5856d6; /* 質押專用紫色 */
+            --up: #ff3b30; --down: #34c759; --pledge-color: #5856d6;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -27,13 +27,19 @@
         .app-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); height: 40px; }
         .app-title { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
         .btn-privacy { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 0; }
-        .status-bar { background: var(--card-bg); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s ease, color 0.3s ease; }
+        
+        /* 狀態條 (維持率 + 雙幣現金) */
+        .status-bar { background: var(--card-bg); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s ease, color 0.3s ease; }
         .main-metric { display: flex; flex-direction: column; }
-        .metric-label { font-size: 0.8rem; opacity: 0.8; font-weight: 600; margin-bottom: 2px; }
-        .metric-value { font-size: 2.2rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        .metric-label { font-size: 0.75rem; opacity: 0.8; font-weight: 600; margin-bottom: 2px; }
+        .metric-value { font-size: 2rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        
         .cash-metric { text-align: right; display: flex; flex-direction: column; justify-content: center; }
-        .cash-label { font-size: 0.75rem; opacity: 0.7; font-weight: 600; }
-        .cash-val { font-size: 1.1rem; font-weight: 700; }
+        .cash-row { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;}
+        .cash-tag { font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; color: white; font-weight: bold;}
+        .bg-twd { background: #999; }
+        .bg-usd { background: #007aff; }
+
         .status-safe { background: var(--success); color: white; }
         .status-warn { background: var(--warning); color: #333; }
         .status-danger { background: var(--danger); color: white; }
@@ -54,7 +60,6 @@
         .item-sub { font-size: 0.85rem; color: var(--text-gray); margin-top: 2px;}
         .item-right { text-align: right; }
         
-        /* 質押標示樣式 */
         .pledge-badge { font-size: 0.75rem; color: var(--pledge-color); background: #f0f0ff; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
         .profit-val { font-size: 0.9rem; font-weight: 600; }
         .profit-up { color: var(--up); }
@@ -63,6 +68,7 @@
         .tag { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; color: white; margin-right: 6px; vertical-align: middle;}
         .tag-buy { background: var(--danger); } 
         .tag-sell { background: var(--success); }
+        .tag-us { background: #007aff; } 
 
         /* 總覽格 */
         .big-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
@@ -92,6 +98,10 @@
         .pledge-input-group { display: flex; flex-direction: column; align-items: flex-end;}
         .pledge-desc { font-size: 0.75rem; color: #999; margin-top: 2px;}
 
+        /* 換匯區塊 */
+        .exchange-box { background: #f8f8fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e5ea; }
+        .exchange-arrow { text-align: center; font-size: 1.5rem; color: #999; margin: 5px 0; }
+
         /* 底部導航 */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); border-top: 1px solid #e5e5ea; display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 200; backdrop-filter: blur(10px); }
         .nav-item { flex: 1; text-align: center; padding: 8px 0; color: #999; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
@@ -107,7 +117,7 @@
 
     <div class="top-fixed-area">
         <div class="app-bar">
-            <div class="app-title">資產戰情室 V4.4</div>
+            <div class="app-title">資產戰情室 V4.6</div>
             <button class="btn-privacy" onclick="togglePrivacy()">
                 <span id="eyeIcon">🙈</span>
             </button>
@@ -118,8 +128,14 @@
                 <span class="metric-value" id="disp_maintRate">--%</span>
             </div>
             <div class="cash-metric">
-                <span class="cash-label">可用現金</span>
-                <span class="cash-val" id="headerCash">****</span>
+                <div class="cash-row">
+                    <span class="cash-val" id="headerCashTwd">****</span>
+                    <span class="cash-tag bg-twd">TWD</span>
+                </div>
+                <div class="cash-row">
+                    <span class="cash-val" id="headerCashUsd">****</span>
+                    <span class="cash-tag bg-usd">USD</span>
+                </div>
             </div>
         </div>
     </div>
@@ -159,23 +175,26 @@
 
     <div id="page-stocks" class="page">
         <div class="card">
-            <div class="card-title">新增交易</div>
+            <div class="card-title">新增交易 (自動扣對應幣別)</div>
             <div class="form-group">
                 <div style="display:flex; gap:10px;">
-                    <select id="stockType" style="flex:1"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select>
+                    <select id="stockType" style="flex:1" onchange="updateStockInputLabel()"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select>
                     <select id="transType" style="flex:1"><option value="buy">買入</option><option value="sell">賣出</option></select>
                 </div>
             </div>
             <div class="form-group">
                 <div style="display:flex; gap:10px;">
                     <input type="date" id="stockDate" style="flex:1">
-                    <input type="text" id="stockSymbol" placeholder="代號 (ex: 2330)" style="flex:1">
+                    <input type="text" id="stockSymbol" placeholder="代號 (ex: AAPL)" style="flex:1">
                 </div>
             </div>
             <div class="form-group">
                 <div style="display:flex; gap:10px;">
-                    <input type="number" id="stockPrice" placeholder="成交價格" step="0.01" style="flex:1">
+                    <input type="number" id="stockPrice" placeholder="價格" step="0.01" style="flex:1">
                     <input type="number" id="stockQty" placeholder="股數" style="flex:1">
+                </div>
+                <div style="font-size:0.8rem; color:#666; margin-top:5px; text-align:right;">
+                    <span id="priceCurrencyHint">以台幣扣款</span>
                 </div>
             </div>
             <button class="btn-primary" onclick="addStockTransaction()">記錄交易</button>
@@ -197,7 +216,7 @@
             <div style="background:#f0f0ff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #e0e0ff;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <div style="font-size:0.8rem; color:var(--pledge-color); font-weight:bold;">目前擔保品總市值</div>
+                        <div style="font-size:0.8rem; color:var(--pledge-color); font-weight:bold;">目前擔保品總市值 (TWD)</div>
                         <div style="font-size:1.4rem; font-weight:800; color:var(--pledge-color);" id="disp_totalCollateralVal">****</div>
                     </div>
                     <button class="btn-action" style="background:var(--pledge-color); color:white;" onclick="openCollateralModal()">🔒 設定擔保品</button>
@@ -206,7 +225,7 @@
 
             <div class="form-group">
                 <div style="display:flex; gap:8px;">
-                    <input type="number" id="pledgeAmount" placeholder="借款金額" style="flex:2">
+                    <input type="number" id="pledgeAmount" placeholder="借款金額 (TWD)" style="flex:2">
                     <input type="number" id="pledgeRate" placeholder="利率%" step="0.01" style="flex:1">
                 </div>
                 <div style="display:flex; gap:8px; margin-top:8px;">
@@ -220,7 +239,7 @@
         <div class="card">
             <div class="card-title">💳 信貸/房貸 (本息攤還)</div>
             <div class="form-group">
-                <label>新增貸款</label>
+                <label>新增貸款 (TWD)</label>
                 <div style="display:flex; gap:8px;">
                     <input type="number" id="creditPrincipal" placeholder="本金" style="flex:2">
                     <input type="number" id="creditRate" placeholder="利率%" step="0.01" style="flex:1">
@@ -236,13 +255,53 @@
     </div>
 
     <div id="page-settings" class="page">
+        
         <div class="card">
-            <div class="card-title">資金管理</div>
-            <div class="form-group">
-                <label>校正現金餘額</label>
-                <input type="number" id="manualCash" placeholder="輸入目前實際現金">
+            <div class="card-title">💱 換匯中心</div>
+            <div class="exchange-box">
+                <div class="form-group">
+                    <label>交易方向</label>
+                    <div style="display:flex; gap:10px;">
+                        <select id="exchangeDir" style="font-weight:bold;">
+                            <option value="twd_to_usd">買入美元 (TWD -> USD)</option>
+                            <option value="usd_to_twd">賣出美元 (USD -> TWD)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>匯率</label>
+                    <input type="number" id="exchangeRateInput" placeholder="成交匯率" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>交易金額 (原幣)</label>
+                    <input type="number" id="exchangeAmount" placeholder="輸入賣出的金額">
+                </div>
+                <button class="btn-primary" onclick="exchangeCurrency()">確認換匯</button>
             </div>
-            <button class="btn-primary" onclick="setCash()">更新現金</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">匯率設定 (用於估值)</div>
+            <div class="form-group">
+                <label>目前參考匯率</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="settingExchangeRate" placeholder="例如 32.5" step="0.01">
+                    <button class="btn-primary" style="width:auto;" onclick="saveExchangeRate()">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">資金校正 (直接修改餘額)</div>
+            <div class="form-group">
+                <label>台幣活存 (TWD)</label>
+                <input type="number" id="manualCashTwd" placeholder="輸入台幣餘額">
+            </div>
+            <div class="form-group">
+                <label>美元活存 (USD)</label>
+                <input type="number" id="manualCashUsd" placeholder="輸入美元餘額">
+            </div>
+            <button class="btn-primary" onclick="setCashManual()">更新餘額</button>
         </div>
         <div class="card">
             <button class="btn-danger" onclick="resetAllData()">⚠️ 清除所有資料重來</button>
@@ -259,7 +318,7 @@
     <div id="priceModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <span>更新市價 (連動維持率)</span>
+                <span>更新市價</span>
                 <span onclick="closeModal('priceModal')" style="cursor:pointer;color:#999">×</span>
             </div>
             <div id="priceInputList"></div>
@@ -279,22 +338,29 @@
     </div>
 
     <script>
-        // 資料結構 V4.4: 
-        // pledgeCollateral (廢除數字，改為動態計算) 
-        // pledgedShares: { '2330': 1000, '0050': 200 } // 紀錄每支股票押了多少股
-        let data = { cash: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {} };
+        // 資料結構 V4.6: cash 改為 cashTwd / cashUsd
+        let data = { cashTwd: 0, cashUsd: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {}, exchangeRate: 32.5 };
         let isPrivacyMode = true; 
 
         window.onload = () => {
             if(localStorage.getItem('asset_v4')) {
                 let saved = JSON.parse(localStorage.getItem('asset_v4'));
+                // 遷移舊資料 (如果是舊版 cash，轉移到 cashTwd)
+                if(saved.cash !== undefined) {
+                    saved.cashTwd = saved.cash;
+                    saved.cashUsd = 0;
+                    delete saved.cash;
+                }
                 if(!saved.prices) saved.prices = {};
                 if(!saved.pledgedShares) saved.pledgedShares = {};
+                if(!saved.exchangeRate) saved.exchangeRate = 32.5; 
                 data = saved;
             }
             document.getElementById('stockDate').valueAsDate = new Date();
             document.getElementById('creditStartDate').valueAsDate = new Date();
             document.getElementById('pledgeDate').valueAsDate = new Date();
+            document.getElementById('settingExchangeRate').value = data.exchangeRate;
+            document.getElementById('exchangeRateInput').value = data.exchangeRate;
             updateUI();
         };
 
@@ -312,6 +378,11 @@
         function fmt(num, isMoney = true) {
             if (isMoney && isPrivacyMode) return '****';
             return Math.round(num).toLocaleString();
+        }
+        
+        function fmtUsd(num, isMoney = true) {
+            if (isMoney && isPrivacyMode) return '****';
+            return num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
         function getInventory() {
@@ -351,6 +422,13 @@
         }
 
         // --- 交易邏輯 ---
+        function updateStockInputLabel() {
+            let type = document.getElementById('stockType').value;
+            let hint = document.getElementById('priceCurrencyHint');
+            if(type === 'us') hint.innerText = `以美元 (USD) 計價，將扣除美元餘額`;
+            else hint.innerText = "以台幣 (TWD) 計價，將扣除台幣餘額";
+        }
+
         function addStockTransaction() {
             let type = document.getElementById('stockType').value;
             let action = document.getElementById('transType').value;
@@ -359,14 +437,47 @@
             let price = parseFloat(document.getElementById('stockPrice').value);
             let qty = parseFloat(document.getElementById('stockQty').value);
             if(!symbol || !price || !qty) return alert('請填寫完整');
-            let total = price * qty;
-            if(action === 'buy') data.cash -= total;
-            else data.cash += total;
             
-            data.prices[symbol] = price; // 同步更新市價
+            let total = price * qty;
+
+            if (type === 'us') {
+                // 美股 -> 扣美元
+                if(action === 'buy') data.cashUsd -= total;
+                else data.cashUsd += total;
+            } else {
+                // 台股 -> 扣台幣
+                if(action === 'buy') data.cashTwd -= total;
+                else data.cashTwd += total;
+            }
+            
+            data.prices[symbol] = price; 
             data.transactions.push({ id: Date.now(), type, action, symbol, date, price, qty });
             saveData();
             alert('交易已記錄');
+        }
+
+        // --- 換匯邏輯 ---
+        function exchangeCurrency() {
+            let dir = document.getElementById('exchangeDir').value;
+            let rate = parseFloat(document.getElementById('exchangeRateInput').value);
+            let amount = parseFloat(document.getElementById('exchangeAmount').value);
+
+            if(!rate || !amount) return alert('請填寫匯率與金額');
+
+            if (dir === 'twd_to_usd') {
+                // 賣台幣(amount) -> 買美元
+                data.cashTwd -= amount;
+                data.cashUsd += (amount / rate);
+                alert(`已換匯：扣除 NT$${amount}，獲得 $${(amount/rate).toFixed(2)}`);
+            } else {
+                // 賣美元(amount) -> 買台幣
+                data.cashUsd -= amount;
+                data.cashTwd += (amount * rate);
+                alert(`已換匯：扣除 $${amount}，獲得 NT$${Math.round(amount*rate)}`);
+            }
+            // 更新估值匯率
+            data.exchangeRate = rate;
+            saveData();
         }
 
         function addCreditLoan() {
@@ -375,7 +486,7 @@
             let term = parseFloat(document.getElementById('creditTerm').value);
             let startDate = document.getElementById('creditStartDate').value;
             if(!principal) return;
-            data.cash += principal; 
+            data.cashTwd += principal; // 貸款增加台幣
             data.loans.push({ id: Date.now(), type: 'credit', principal, rate, term, startDate });
             saveData();
         }
@@ -385,18 +496,33 @@
             let rate = parseFloat(document.getElementById('pledgeRate').value);
             let date = document.getElementById('pledgeDate').value;
             if(!amount) return;
-            data.cash += amount; 
+            data.cashTwd += amount; // 質押增加台幣
             data.pledges.push({ id: Date.now(), amount, rate, startDate: date });
             saveData();
         }
 
-        function setCash() {
-            let val = parseFloat(document.getElementById('manualCash').value);
-            if(!isNaN(val)) { data.cash = val; saveData(); alert('現金已更新'); }
+        function setCashManual() {
+            let twd = parseFloat(document.getElementById('manualCashTwd').value);
+            let usd = parseFloat(document.getElementById('manualCashUsd').value);
+            
+            if(!isNaN(twd)) data.cashTwd = twd;
+            if(!isNaN(usd)) data.cashUsd = usd;
+            
+            saveData();
+            alert('餘額已更新');
+        }
+        
+        function saveExchangeRate() {
+            let val = parseFloat(document.getElementById('settingExchangeRate').value);
+            if(!isNaN(val) && val > 0) {
+                data.exchangeRate = val;
+                saveData();
+                alert('參考匯率已更新');
+            }
         }
 
         function deleteItem(type, id) {
-            if(!confirm('確定刪除?')) return;
+            if(!confirm('確定刪除? 注意：刪除交易不會自動回補現金，請手動校正餘額。')) return;
             if(type === 'trans') data.transactions = data.transactions.filter(x => x.id !== id);
             if(type === 'loan') data.loans = data.loans.filter(x => x.id !== id);
             if(type === 'pledge') data.pledges = data.pledges.filter(x => x.id !== id);
@@ -407,7 +533,7 @@
             if(confirm('確定清除所有資料?')) { localStorage.removeItem('asset_v4'); location.reload(); }
         }
 
-        // --- 價格 Modal ---
+        // --- Modal ---
         function openPriceModal() {
             let inv = getInventory();
             let container = document.getElementById('priceInputList');
@@ -415,7 +541,8 @@
             for(let sym in inv) {
                 if(inv[sym].qty > 0) {
                     let currentP = data.prices[sym] || inv[sym].cost;
-                    container.innerHTML += `<div class="price-row"><span class="price-label">${sym}</span><input type="number" class="price-input price-update" id="price_${sym}" value="${currentP}" step="0.01"></div>`;
+                    let currencyLabel = inv[sym].type === 'us' ? 'USD' : 'TWD';
+                    container.innerHTML += `<div class="price-row"><span class="price-label">${sym} (${currencyLabel})</span><input type="number" class="price-input price-update" id="price_${sym}" value="${currentP}" step="0.01"></div>`;
                 }
             }
             document.getElementById('priceModal').style.display = 'flex';
@@ -431,7 +558,6 @@
             closeModal('priceModal');
         }
 
-        // --- 擔保品 Modal (New) ---
         function openCollateralModal() {
             let inv = getInventory();
             let container = document.getElementById('collateralInputList');
@@ -473,11 +599,18 @@
 
         // --- UI Update ---
         function updateUI() {
-            document.getElementById('headerCash').innerText = fmt(data.cash);
+            // 現金顯示
+            document.getElementById('headerCashTwd').innerText = fmt(data.cashTwd);
+            document.getElementById('headerCashUsd').innerText = fmtUsd(data.cashUsd);
+            
+            // 手動輸入框顯示
+            document.getElementById('manualCashTwd').value = data.cashTwd;
+            document.getElementById('manualCashUsd').value = data.cashUsd;
 
             let inv = getInventory();
             let listHtml = '';
-            let twVal = 0, usVal = 0;
+            let twVal = 0;
+            let usValUsd = 0; 
             let totalCollateralVal = 0;
 
             for(let sym in inv) {
@@ -486,33 +619,49 @@
                     let totalVal = marketPrice * inv[sym].qty;
                     let costVal = inv[sym].cost * inv[sym].qty;
                     let profit = totalVal - costVal;
+                    
+                    let currency = inv[sym].type === 'us' ? '$' : 'NT$';
+                    let displayVal = fmt(totalVal, true); 
+                    
+                    if(inv[sym].type === 'tw') {
+                        twVal += totalVal;
+                    } else {
+                        usValUsd += totalVal; 
+                        displayVal = `$${fmtUsd(totalVal)}`; 
+                    }
+                    
                     let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
                     let profitSign = profit >= 0 ? '+' : '';
-                    
-                    if(inv[sym].type === 'tw') twVal += totalVal; else usVal += totalVal;
 
-                    // 計算該股質押市值
+                    // 擔保品市值計算 (美股需乘匯率)
                     let pledgedQty = data.pledgedShares[sym] || 0;
                     if(pledgedQty > 0) {
-                        totalCollateralVal += pledgedQty * marketPrice;
+                        let pledgeVal = pledgedQty * marketPrice;
+                        if(inv[sym].type === 'us') pledgeVal *= data.exchangeRate;
+                        totalCollateralVal += pledgeVal;
                     }
 
                     listHtml += `
                     <div class="list-item">
                         <div>
-                            <div class="item-main">${sym} <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-sell'}">${inv[sym].type.toUpperCase()}</span> ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}</div>
-                            <div class="item-sub">均價 ${inv[sym].cost.toFixed(2)} | 市價 <b>${marketPrice}</b></div>
+                            <div class="item-main">${sym} <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-us'}">${inv[sym].type.toUpperCase()}</span> ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}</div>
+                            <div class="item-sub">均 ${currency}${inv[sym].cost.toFixed(2)} | 現 <b>${currency}${marketPrice}</b></div>
                         </div>
                         <div class="item-right">
-                            <div class="item-main">$${fmt(totalVal)}</div>
-                            <div class="profit-val ${profitClass}">${profitSign}${fmt(profit)}</div>
+                            <div class="item-main">${displayVal}</div>
+                            <div class="profit-val ${profitClass}">${profitSign}${currency}${fmtUsd(profit)}</div>
                         </div>
                     </div>`;
                 }
             }
             document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
+            
+            // 換算台幣價值
+            let usValTwd = usValUsd * data.exchangeRate;
+            let cashUsdToTwd = data.cashUsd * data.exchangeRate;
+
             document.getElementById('dashTwVal').innerText = fmt(twVal);
-            document.getElementById('dashUsVal').innerText = fmt(usVal);
+            document.getElementById('dashUsVal').innerText = `$${fmtUsd(usValUsd)} / NT$${fmt(usValTwd)}`;
             document.getElementById('disp_totalCollateralVal').innerText = fmt(totalCollateralVal);
 
             let loanHtml = '';
@@ -537,7 +686,8 @@
             document.getElementById('pledgeList').innerHTML = pledgeHtml;
             totalDebt += totalPledgeLoan;
 
-            let totalAssets = data.cash + twVal + usVal; // 資產 = 現金 + 股票總市值 (包含質押的)
+            // 總資產 = 現金(台幣) + 現金(美元轉台幣) + 台股市值 + 美股市值(轉台幣)
+            let totalAssets = data.cashTwd + cashUsdToTwd + twVal + usValTwd;
             let netWorth = totalAssets - totalDebt;
             let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
 
