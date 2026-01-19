@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產槓桿記錄 V4.6</title>
+    <title>資產槓桿記錄 V4.7</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -28,7 +28,6 @@
         .app-title { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
         .btn-privacy { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 0; }
         
-        /* 狀態條 (維持率 + 雙幣現金) */
         .status-bar { background: var(--card-bg); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s ease, color 0.3s ease; }
         .main-metric { display: flex; flex-direction: column; }
         .metric-label { font-size: 0.75rem; opacity: 0.8; font-weight: 600; margin-bottom: 2px; }
@@ -91,16 +90,13 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: white; width: 85%; max-width: 360px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
         .modal-header { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; }
-        
         .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom:10px; border-bottom:1px solid #eee; }
         .price-label { font-weight: bold; font-size: 1rem; }
         .price-input { width: 100px; text-align: right; padding: 8px; font-size: 1rem; }
         .pledge-input-group { display: flex; flex-direction: column; align-items: flex-end;}
         .pledge-desc { font-size: 0.75rem; color: #999; margin-top: 2px;}
-
-        /* 換匯區塊 */
+        
         .exchange-box { background: #f8f8fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e5ea; }
-        .exchange-arrow { text-align: center; font-size: 1.5rem; color: #999; margin: 5px 0; }
 
         /* 底部導航 */
         .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); border-top: 1px solid #e5e5ea; display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 200; backdrop-filter: blur(10px); }
@@ -117,7 +113,7 @@
 
     <div class="top-fixed-area">
         <div class="app-bar">
-            <div class="app-title">資產戰情室 V4.6</div>
+            <div class="app-title">資產戰情室 V4.7</div>
             <button class="btn-privacy" onclick="togglePrivacy()">
                 <span id="eyeIcon">🙈</span>
             </button>
@@ -237,7 +233,7 @@
         </div>
 
         <div class="card">
-            <div class="card-title">💳 信貸/房貸 (本息攤還)</div>
+            <div class="card-title">💳 信貸/房貸 (每月自動扣款)</div>
             <div class="form-group">
                 <label>新增貸款 (TWD)</label>
                 <div style="display:flex; gap:8px;">
@@ -246,8 +242,9 @@
                 </div>
                 <div style="display:flex; gap:8px; margin-top:8px;">
                     <input type="number" id="creditTerm" placeholder="期數(月)" style="flex:1">
-                    <input type="date" id="creditStartDate" style="flex:2">
+                    <input type="number" id="creditDeductDay" placeholder="每月扣款日(ex:20)" style="flex:1">
                 </div>
+                <div style="font-size:0.8rem; color:#666; margin-top:5px;">* 設定扣款日後，APP會自動從台幣餘額扣除本利和並減少期數。</div>
             </div>
             <button class="btn-primary" onclick="addCreditLoan()">新增信貸</button>
             <div id="creditList" style="margin-top:15px;"></div>
@@ -292,16 +289,21 @@
         </div>
 
         <div class="card">
-            <div class="card-title">資金校正 (直接修改餘額)</div>
+            <div class="card-title">資金增減 (調整現有餘額)</div>
             <div class="form-group">
-                <label>台幣活存 (TWD)</label>
-                <input type="number" id="manualCashTwd" placeholder="輸入台幣餘額">
+                <label>台幣 (TWD) 異動</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="adjCashTwd" placeholder="+存入 / -領出">
+                    <button class="btn-primary" style="width:auto;" onclick="adjustCash('twd')">執行</button>
+                </div>
             </div>
             <div class="form-group">
-                <label>美元活存 (USD)</label>
-                <input type="number" id="manualCashUsd" placeholder="輸入美元餘額">
+                <label>美元 (USD) 異動</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="adjCashUsd" placeholder="+存入 / -領出">
+                    <button class="btn-primary" style="width:auto;" onclick="adjustCash('usd')">執行</button>
+                </div>
             </div>
-            <button class="btn-primary" onclick="setCashManual()">更新餘額</button>
         </div>
         <div class="card">
             <button class="btn-danger" onclick="resetAllData()">⚠️ 清除所有資料重來</button>
@@ -338,19 +340,13 @@
     </div>
 
     <script>
-        // 資料結構 V4.6: cash 改為 cashTwd / cashUsd
+        // 資料結構 V4.7: 新增 deductDay, remainingTerms, pmt (信貸專用), lastPaidMonth
         let data = { cashTwd: 0, cashUsd: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {}, exchangeRate: 32.5 };
         let isPrivacyMode = true; 
 
         window.onload = () => {
             if(localStorage.getItem('asset_v4')) {
                 let saved = JSON.parse(localStorage.getItem('asset_v4'));
-                // 遷移舊資料 (如果是舊版 cash，轉移到 cashTwd)
-                if(saved.cash !== undefined) {
-                    saved.cashTwd = saved.cash;
-                    saved.cashUsd = 0;
-                    delete saved.cash;
-                }
                 if(!saved.prices) saved.prices = {};
                 if(!saved.pledgedShares) saved.pledgedShares = {};
                 if(!saved.exchangeRate) saved.exchangeRate = 32.5; 
@@ -361,12 +357,40 @@
             document.getElementById('pledgeDate').valueAsDate = new Date();
             document.getElementById('settingExchangeRate').value = data.exchangeRate;
             document.getElementById('exchangeRateInput').value = data.exchangeRate;
+            
+            checkLoanDeductions(); // 檢查是否需要自動扣款
             updateUI();
         };
 
         function saveData() {
             localStorage.setItem('asset_v4', JSON.stringify(data));
             updateUI();
+        }
+
+        // --- 自動扣款邏輯 (V4.7 New) ---
+        function checkLoanDeductions() {
+            let today = new Date();
+            let currentMonthStr = `${today.getFullYear()}-${today.getMonth()+1}`;
+            let currentDay = today.getDate();
+            let deducted = false;
+
+            data.loans.forEach(loan => {
+                // 如果有設定扣款日，且還有剩餘期數，且這個月還沒扣過
+                if(loan.deductDay && loan.remainingTerms > 0 && loan.lastPaidMonth !== currentMonthStr) {
+                    if(currentDay >= loan.deductDay) {
+                        // 執行扣款
+                        data.cashTwd -= loan.pmt;
+                        loan.remainingTerms -= 1;
+                        loan.lastPaidMonth = currentMonthStr; // 標記本月已付
+                        deducted = true;
+                    }
+                }
+            });
+
+            if(deducted) {
+                saveData();
+                alert(`💰 已自動扣除本月信貸還款，期數已更新。`);
+            }
         }
 
         function togglePrivacy() {
@@ -400,16 +424,15 @@
             return inv;
         }
 
-        function calcCredit(loan) {
+        // 信貸計算 (V4.7 改為依據剩餘期數動態顯示)
+        function calcRemainingPrincipal(loan) {
+            // PV函數：計算剩餘本金 (Estimate)
+            // PV = PMT * (1 - (1+r)^-n) / r
+            if (loan.remainingTerms <= 0) return 0;
             let r = loan.rate / 100 / 12;
-            let n = loan.term;
-            let pmt = Math.round(loan.principal * (r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1));
-            let start = new Date(loan.startDate);
-            let now = new Date();
-            let monthsPassed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-            let monthsLeft = Math.max(0, n - monthsPassed);
-            let remainingPrincipal = Math.round(loan.principal * (monthsLeft / n)); 
-            return { pmt, monthsLeft, remainingPrincipal };
+            let n = loan.remainingTerms;
+            let pv = loan.pmt * (1 - Math.pow(1+r, -n)) / r;
+            return Math.round(pv);
         }
 
         function calcPledge(p) {
@@ -441,13 +464,9 @@
             let total = price * qty;
 
             if (type === 'us') {
-                // 美股 -> 扣美元
-                if(action === 'buy') data.cashUsd -= total;
-                else data.cashUsd += total;
+                if(action === 'buy') data.cashUsd -= total; else data.cashUsd += total;
             } else {
-                // 台股 -> 扣台幣
-                if(action === 'buy') data.cashTwd -= total;
-                else data.cashTwd += total;
+                if(action === 'buy') data.cashTwd -= total; else data.cashTwd += total;
             }
             
             data.prices[symbol] = price; 
@@ -456,7 +475,6 @@
             alert('交易已記錄');
         }
 
-        // --- 換匯邏輯 ---
         function exchangeCurrency() {
             let dir = document.getElementById('exchangeDir').value;
             let rate = parseFloat(document.getElementById('exchangeRateInput').value);
@@ -465,17 +483,14 @@
             if(!rate || !amount) return alert('請填寫匯率與金額');
 
             if (dir === 'twd_to_usd') {
-                // 賣台幣(amount) -> 買美元
                 data.cashTwd -= amount;
                 data.cashUsd += (amount / rate);
                 alert(`已換匯：扣除 NT$${amount}，獲得 $${(amount/rate).toFixed(2)}`);
             } else {
-                // 賣美元(amount) -> 買台幣
                 data.cashUsd -= amount;
                 data.cashTwd += (amount * rate);
                 alert(`已換匯：扣除 $${amount}，獲得 NT$${Math.round(amount*rate)}`);
             }
-            // 更新估值匯率
             data.exchangeRate = rate;
             saveData();
         }
@@ -484,10 +499,21 @@
             let principal = parseFloat(document.getElementById('creditPrincipal').value);
             let rate = parseFloat(document.getElementById('creditRate').value);
             let term = parseFloat(document.getElementById('creditTerm').value);
-            let startDate = document.getElementById('creditStartDate').value;
-            if(!principal) return;
-            data.cashTwd += principal; // 貸款增加台幣
-            data.loans.push({ id: Date.now(), type: 'credit', principal, rate, term, startDate });
+            let deductDay = parseInt(document.getElementById('creditDeductDay').value);
+            
+            if(!principal || !term) return;
+            
+            // 計算固定月付金 (PMT)
+            let r = rate / 100 / 12;
+            let pmt = Math.round(principal * (r * Math.pow(1+r, term)) / (Math.pow(1+r, term) - 1));
+
+            data.cashTwd += principal; 
+            data.loans.push({ 
+                id: Date.now(), type: 'credit', principal, rate, 
+                totalTerms: term, remainingTerms: term, // 紀錄剩餘期數
+                pmt: pmt, deductDay: deductDay || null, 
+                lastPaidMonth: "" 
+            });
             saveData();
         }
 
@@ -496,20 +522,23 @@
             let rate = parseFloat(document.getElementById('pledgeRate').value);
             let date = document.getElementById('pledgeDate').value;
             if(!amount) return;
-            data.cashTwd += amount; // 質押增加台幣
+            data.cashTwd += amount; 
             data.pledges.push({ id: Date.now(), amount, rate, startDate: date });
             saveData();
         }
 
-        function setCashManual() {
-            let twd = parseFloat(document.getElementById('manualCashTwd').value);
-            let usd = parseFloat(document.getElementById('manualCashUsd').value);
+        function adjustCash(type) {
+            let id = type === 'twd' ? 'adjCashTwd' : 'adjCashUsd';
+            let val = parseFloat(document.getElementById(id).value);
             
-            if(!isNaN(twd)) data.cashTwd = twd;
-            if(!isNaN(usd)) data.cashUsd = usd;
-            
-            saveData();
-            alert('餘額已更新');
+            if(!isNaN(val) && val !== 0) {
+                if(type === 'twd') data.cashTwd += val;
+                else data.cashUsd += val;
+                
+                saveData();
+                document.getElementById(id).value = ''; // 清空輸入框
+                alert('餘額已更新');
+            }
         }
         
         function saveExchangeRate() {
@@ -522,7 +551,7 @@
         }
 
         function deleteItem(type, id) {
-            if(!confirm('確定刪除? 注意：刪除交易不會自動回補現金，請手動校正餘額。')) return;
+            if(!confirm('確定刪除?')) return;
             if(type === 'trans') data.transactions = data.transactions.filter(x => x.id !== id);
             if(type === 'loan') data.loans = data.loans.filter(x => x.id !== id);
             if(type === 'pledge') data.pledges = data.pledges.filter(x => x.id !== id);
@@ -599,13 +628,8 @@
 
         // --- UI Update ---
         function updateUI() {
-            // 現金顯示
             document.getElementById('headerCashTwd').innerText = fmt(data.cashTwd);
             document.getElementById('headerCashUsd').innerText = fmtUsd(data.cashUsd);
-            
-            // 手動輸入框顯示
-            document.getElementById('manualCashTwd').value = data.cashTwd;
-            document.getElementById('manualCashUsd').value = data.cashUsd;
 
             let inv = getInventory();
             let listHtml = '';
@@ -633,7 +657,6 @@
                     let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
                     let profitSign = profit >= 0 ? '+' : '';
 
-                    // 擔保品市值計算 (美股需乘匯率)
                     let pledgedQty = data.pledgedShares[sym] || 0;
                     if(pledgedQty > 0) {
                         let pledgeVal = pledgedQty * marketPrice;
@@ -656,7 +679,6 @@
             }
             document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
             
-            // 換算台幣價值
             let usValTwd = usValUsd * data.exchangeRate;
             let cashUsdToTwd = data.cashUsd * data.exchangeRate;
 
@@ -666,11 +688,19 @@
 
             let loanHtml = '';
             let totalDebt = 0;
+            // 顯示信貸列表 (包含自動扣款日與剩餘本金)
             data.loans.forEach(l => {
-                let info = calcCredit(l);
-                totalDebt += info.remainingPrincipal;
-                loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬</div><div class="item-sub">剩 ${info.monthsLeft} 期 | 月繳 $${fmt(info.pmt)}</div></div>
-                    <div class="item-right"><div class="item-main text-red">-$${fmt(info.remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+                let remainingPrincipal = calcRemainingPrincipal(l);
+                totalDebt += remainingPrincipal;
+                let dayText = l.deductDay ? `<span style="font-size:0.7rem;color:var(--primary);background:#eef;padding:2px 4px;border-radius:4px;">每月${l.deductDay}號扣</span>` : '';
+                
+                // 如果期數歸零，顯示已結清
+                if(l.remainingTerms <= 0) {
+                    loanHtml += `<div class="list-item" style="opacity:0.5"><div><div class="item-main">信貸 (已結清)</div><div class="item-sub">本金 ${Math.round(l.principal/10000)}萬</div></div><div class="item-right"><div class="item-main text-green">結清</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+                } else {
+                    loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬 ${dayText}</div><div class="item-sub">剩 ${l.remainingTerms} 期 | 月繳 $${fmt(l.pmt)}</div></div>
+                        <div class="item-right"><div class="item-main text-red">-$${fmt(remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+                }
             });
             document.getElementById('creditList').innerHTML = loanHtml;
 
@@ -686,7 +716,6 @@
             document.getElementById('pledgeList').innerHTML = pledgeHtml;
             totalDebt += totalPledgeLoan;
 
-            // 總資產 = 現金(台幣) + 現金(美元轉台幣) + 台股市值 + 美股市值(轉台幣)
             let totalAssets = data.cashTwd + cashUsdToTwd + twVal + usValTwd;
             let netWorth = totalAssets - totalDebt;
             let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
