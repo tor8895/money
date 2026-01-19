@@ -3,353 +3,580 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產槓桿紀錄 V3.4</title>
+    <title>資產槓桿記錄 V4.4</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icon.svg">
     <meta name="theme-color" content="#007aff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
         :root {
-            --primary: #007aff;
-            --success: #34c759;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --bg: #e8ebf2;
-            --card-bg: #ffffff;
-            --text-gray: #666;
+            --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ffcc00;
+            --bg: #f2f2f7; --card-bg: #ffffff; --text-gray: #8e8e93; --text-dark: #1c1c1e;
+            --up: #ff3b30; --down: #34c759; --pledge-color: #5856d6; /* 質押專用紫色 */
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 15px;
-            color: #333;
-            padding-bottom: 50px;
-            user-select: none;
-        }
-        
-        /* 卡片通用 */
-        .stat-card, .control-group, .pledge-box {
-            background: var(--card-bg);
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
-            transition: all 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg); margin: 0; padding: 0; color: var(--text-dark);
+            padding-bottom: 90px; padding-top: 130px; user-select: none;
         }
 
-        /* 標題列與眼睛開關 */
-        .app-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 0 5px;
-        }
-        .app-title { font-size: 1.2rem; font-weight: 800; color: #1c1c1e; }
-        .privacy-toggle {
-            background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 5px;
-            color: var(--primary);
-        }
+        /* --- 頂部固定區 --- */
+        .top-fixed-area { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .app-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); height: 40px; }
+        .app-title { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
+        .btn-privacy { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 0; }
+        .status-bar { background: var(--card-bg); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s ease, color 0.3s ease; }
+        .main-metric { display: flex; flex-direction: column; }
+        .metric-label { font-size: 0.8rem; opacity: 0.8; font-weight: 600; margin-bottom: 2px; }
+        .metric-value { font-size: 2.2rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        .cash-metric { text-align: right; display: flex; flex-direction: column; justify-content: center; }
+        .cash-label { font-size: 0.75rem; opacity: 0.7; font-weight: 600; }
+        .cash-val { font-size: 1.1rem; font-weight: 700; }
+        .status-safe { background: var(--success); color: white; }
+        .status-warn { background: var(--warning); color: #333; }
+        .status-danger { background: var(--danger); color: white; }
+        .status-neutral { background: var(--card-bg); color: var(--text-dark); }
 
-        /* 儀表板 */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .stat-card { padding: 15px; text-align: center; }
-        .stat-card.full-width { grid-column: span 2; }
-        .stat-label { font-size: 0.85rem; color: #8e8e93; margin-bottom: 5px; font-weight: 500; }
-        .stat-value { font-size: 1.3rem; font-weight: 800; color: #1c1c1e; }
-        .stat-sub { font-size: 0.75rem; color: #8e8e93; margin-top: 4px; }
+        /* --- 內容區域 --- */
+        .page { display: none; padding: 15px; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 卡片與列表 --- */
+        .card { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card-title { font-size: 0.95rem; color: var(--text-gray); font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
         
-        .text-green { color: var(--success) !important; }
+        .list-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .list-item:last-child { border-bottom: none; }
+        .item-main { font-weight: 700; font-size: 1.05rem; }
+        .item-sub { font-size: 0.85rem; color: var(--text-gray); margin-top: 2px;}
+        .item-right { text-align: right; }
+        
+        /* 質押標示樣式 */
+        .pledge-badge { font-size: 0.75rem; color: var(--pledge-color); background: #f0f0ff; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
+        .profit-val { font-size: 0.9rem; font-weight: 600; }
+        .profit-up { color: var(--up); }
+        .profit-down { color: var(--down); }
+
+        .tag { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; color: white; margin-right: 6px; vertical-align: middle;}
+        .tag-buy { background: var(--danger); } 
+        .tag-sell { background: var(--success); }
+
+        /* 總覽格 */
+        .big-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .big-stat-card { background: var(--card-bg); border-radius: 20px; padding: 20px 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; min-height: 110px; }
+        .big-stat-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 8px; font-weight: 600; }
+        .big-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--text-dark); word-break: break-all; line-height: 1.1; }
+        .full-width-card { grid-column: span 2; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-gray); margin-bottom: 6px; font-weight: 600;}
+        input, select { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; background: #fff; font-weight: 600;}
+        input:focus { outline: none; border-color: var(--primary); }
+        
+        .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.2); }
+        .btn-purple { width: 100%; background: var(--pledge-color); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .btn-danger { width: 100%; background: var(--danger); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; margin-top: 20px;}
+        .btn-action { font-size: 0.85rem; padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 15px; font-weight: bold; color: var(--primary); cursor: pointer; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: white; width: 85%; max-width: 360px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
+        .modal-header { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; }
+        
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom:10px; border-bottom:1px solid #eee; }
+        .price-label { font-weight: bold; font-size: 1rem; }
+        .price-input { width: 100px; text-align: right; padding: 8px; font-size: 1rem; }
+        .pledge-input-group { display: flex; flex-direction: column; align-items: flex-end;}
+        .pledge-desc { font-size: 0.75rem; color: #999; margin-top: 2px;}
+
+        /* 底部導航 */
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); border-top: 1px solid #e5e5ea; display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 200; backdrop-filter: blur(10px); }
+        .nav-item { flex: 1; text-align: center; padding: 8px 0; color: #999; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
+        .nav-item.active { color: var(--primary); font-weight: 700; }
+        .nav-icon { font-size: 1.5rem; display: block; margin-bottom: 2px; }
+
         .text-red { color: var(--danger) !important; }
+        .text-green { color: var(--success) !important; }
         .text-blue { color: var(--primary) !important; }
-        
-        /* 質押專區 */
-        .pledge-box {
-            padding: 20px;
-            margin-bottom: 25px;
-            border-left: 10px solid #ccc;
-        }
-        .pledge-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .pledge-title { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 5px; }
-        .pledge-rate-area { display:flex; align-items:baseline; justify-content:center; gap:8px; margin-bottom:15px; }
-        .pledge-rate { font-size: 1.8rem; font-weight: 900; }
-        .pledge-details { display:grid; grid-template-columns:1fr 1fr; gap:15px; text-align:center; }
-        .pledge-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 5px; }
-        .pledge-val { font-weight: bold; font-size: 1.1rem; }
-        .loan-val { color: #d35400; }
-
-        /* 質押變色邏輯 */
-        .pledge-box.bg-success { border-left-color: var(--success); }
-        .pledge-box.bg-warning { background-color: var(--warning) !important; color: #333; border: none; }
-        .pledge-box.bg-danger { background-color: var(--danger) !important; color: white !important; border: none; }
-        .pledge-box.bg-danger .pledge-label, 
-        .pledge-box.bg-danger .loan-val,
-        .pledge-box.bg-danger .pledge-rate { color: rgba(255,255,255,0.9) !important; }
-
-        /* 操作區 */
-        .section-title { font-size: 0.95rem; color: #6c6c70; margin: 25px 0 10px 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-        .control-group { overflow: hidden; margin-bottom: 20px; }
-        .control-item { padding: 15px 20px; border-bottom: 1px solid #f0f0f5; }
-        .control-item:last-child { border-bottom: none; }
-        .control-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1rem; font-weight: 600; }
-        .current-val { color: var(--primary); font-weight: bold; font-family: monospace; font-size: 1.1rem;}
-        
-        .input-row { display: flex; gap: 10px; }
-        input[type="number"] {
-            flex: 1; padding: 12px; border: 2px solid #e5e5ea; border-radius: 10px; font-size: 1rem;
-            background: #f8f8fa; -webkit-appearance: none; transition: all 0.2s;
-        }
-        input:focus { outline: none; border-color: var(--primary); background: #fff; }
-        
-        button.btn-update { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 18px; font-weight: 700; cursor: pointer; }
-        button.btn-update:active { opacity: 0.7; transform: scale(0.98); }
-        .danger-zone { margin-top: 50px; text-align: center; margin-bottom: 30px;}
-        .btn-reset { color: var(--danger); background: white; border: 2px solid var(--danger); padding: 8px 20px; border-radius: 25px; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="app-header">
-        <div class="app-title">資產戰情室</div>
-        <button class="privacy-toggle" onclick="togglePrivacy()">
-            <span id="eyeIcon">👁️</span>
-        </button>
-    </div>
-
-    <div class="dashboard">
-        <div class="stat-card full-width">
-            <div class="stat-label">每月自由現金流</div>
-            <div class="stat-value" id="disp_cashflow">$$$</div>
-            <div class="stat-sub">薪水 - (貸款還款 + 定期定額)</div>
+    <div class="top-fixed-area">
+        <div class="app-bar">
+            <div class="app-title">資產戰情室 V4.4</div>
+            <button class="btn-privacy" onclick="togglePrivacy()">
+                <span id="eyeIcon">🙈</span>
+            </button>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">總資產</div>
-            <div class="stat-value text-blue" id="disp_totalAssets">$$$</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">淨資產</div>
-            <div class="stat-value text-green" id="disp_netWorth">$$$</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">台股庫存</div>
-            <div class="stat-value" id="disp_twStock">$$$</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">美股庫存 (TWD)</div>
-            <div class="stat-value" id="disp_usStock">$$$</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">貸款總餘額</div>
-            <div class="stat-value text-red" id="disp_totalLoan">$$$</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">真實槓桿率</div>
-            <div class="stat-value" id="disp_leverage">1.0x</div>
-        </div>
-    </div>
-
-    <div class="pledge-box" id="pledgeBox">
-        <div class="pledge-header">
-            <div class="pledge-title">
-                <span id="pledgeIcon">🏦</span> 質押監控
+        <div class="status-bar status-neutral" id="stickyStatusBar">
+            <div class="main-metric">
+                <span class="metric-label" id="statusLabel">維持率</span>
+                <span class="metric-value" id="disp_maintRate">--%</span>
             </div>
-            <span id="disp_pledgeStatus" style="font-size:0.9rem; font-weight:bold;">未啟用</span>
-        </div>
-        <div class="pledge-rate-area">
-            <span class="pledge-label" style="font-size:1rem;">維持率</span>
-            <span class="pledge-rate text-blue" id="disp_maintRate">--%</span>
-        </div>
-        <div class="pledge-details">
-            <div>
-                <div class="pledge-label">抵押品市值</div>
-                <div class="pledge-val" id="disp_pledgeCollateral">$$$</div>
-            </div>
-            <div>
-                <div class="pledge-label">借出金額</div>
-                <div class="pledge-val loan-val" id="disp_pledgeLoan">$$$</div>
+            <div class="cash-metric">
+                <span class="cash-label">可用現金</span>
+                <span class="cash-val" id="headerCash">****</span>
             </div>
         </div>
     </div>
 
-    <div class="section-title">⚙️ 每月收支設定 (固定值)</div>
-    <div class="control-group">
-        <div class="control-item">
-            <div class="control-header"><span>月薪</span><span class="current-val" id="val_salary">$$$</span></div>
-            <div class="input-row"><input type="number" id="in_salary" placeholder="輸入目前月薪" inputmode="numeric"><button class="btn-update" onclick="updateSetting('salary', 'in_salary')">設定</button></div>
+    <div id="page-dashboard" class="page active">
+        <div class="big-stats-grid">
+            <div class="big-stat-card">
+                <span class="big-stat-label">淨資產 (Net)</span>
+                <span class="big-stat-val text-green" id="dashNetWorth">****</span>
+            </div>
+            <div class="big-stat-card">
+                <span class="big-stat-label">總資產 (Assets)</span>
+                <span class="big-stat-val text-blue" id="dashAssets">****</span>
+            </div>
+            <div class="big-stat-card">
+                <span class="big-stat-label">總負債 (Debts)</span>
+                <span class="big-stat-val text-red" id="dashDebts">****</span>
+            </div>
+            <div class="big-stat-card">
+                <span class="big-stat-label">槓桿率 (X)</span>
+                <span class="big-stat-val" id="dashLeverage">1.0x</span>
+            </div>
         </div>
-        <div class="control-item">
-            <div class="control-header"><span>每月定期定額</span><span class="current-val" id="val_dca">$$$</span></div>
-            <div class="input-row"><input type="number" id="in_dca" placeholder="每月投資金額" inputmode="numeric"><button class="btn-update" onclick="updateSetting('dca', 'in_dca')">設定</button></div>
-        </div>
-        <div class="control-item">
-            <div class="control-header"><span>每月貸款還款</span><span class="current-val" id="val_repay">$$$</span></div>
-            <div class="input-row"><input type="number" id="in_repay" placeholder="每月需繳本利和" inputmode="numeric"><button class="btn-update" onclick="updateSetting('repay', 'in_repay')">設定</button></div>
+
+        <div class="full-width-card">
+            <div class="card-title">資產分佈 (以市價計算)</div>
+            <div class="list-item">
+                <span class="item-main">🇹🇼 台股市值</span>
+                <span class="item-right item-main" id="dashTwVal">****</span>
+            </div>
+            <div class="list-item">
+                <span class="item-main">🇺🇸 美股市值 (TWD)</span>
+                <span class="item-right item-main" id="dashUsVal">****</span>
+            </div>
         </div>
     </div>
 
-    <div class="section-title">📈 資產異動 (輸入 +增加 / -減少)</div>
-    <div class="control-group">
-        <div class="control-item">
-            <div class="control-header"><span>手頭現金</span><span class="current-val" id="val_cash">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_cash" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('cash', 'delta_cash')">更新</button></div>
+    <div id="page-stocks" class="page">
+        <div class="card">
+            <div class="card-title">新增交易</div>
+            <div class="form-group">
+                <div style="display:flex; gap:10px;">
+                    <select id="stockType" style="flex:1"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select>
+                    <select id="transType" style="flex:1"><option value="buy">買入</option><option value="sell">賣出</option></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="stockDate" style="flex:1">
+                    <input type="text" id="stockSymbol" placeholder="代號 (ex: 2330)" style="flex:1">
+                </div>
+            </div>
+            <div class="form-group">
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="stockPrice" placeholder="成交價格" step="0.01" style="flex:1">
+                    <input type="number" id="stockQty" placeholder="股數" style="flex:1">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addStockTransaction()">記錄交易</button>
         </div>
-        <div class="control-item">
-            <div class="control-header"><span>台股現貨 (1x)</span><span class="current-val" id="val_tw1x">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_tw1x" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('tw1x', 'delta_tw1x')">更新</button></div>
-        </div>
-        <div class="control-item">
-            <div class="control-header"><span>台股槓桿ETF (2x)</span><span class="current-val" id="val_tw2x">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_tw2x" placeholder="增減金額" inputmode="decimal"><button class="btn-update" onclick="updateAsset('tw2x', 'delta_tw2x')">更新</button></div>
-        </div>
-        <div class="control-item">
-            <div class="control-header"><span>美股/ETF (TWD)</span><span class="current-val" id="val_us">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_us" placeholder="台幣價值" inputmode="decimal"><button class="btn-update" onclick="updateAsset('us', 'delta_us')">更新</button></div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>庫存損益</span>
+                <button class="btn-action" onclick="openPriceModal()">📝 更新市價</button>
+            </div>
+            <div id="stockInventoryList"></div>
         </div>
     </div>
 
-    <div class="section-title">📉 負債異動 (輸入 +借款 / -還款)</div>
-    <div class="control-group">
-        <div class="control-item">
-            <div class="control-header"><span>信貸/房貸本金餘額</span><span class="current-val text-red" id="val_loans">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_loans" placeholder="增減負債" inputmode="decimal"><button class="btn-update" onclick="updateAsset('loans', 'delta_loans')">更新</button></div>
+    <div id="page-loans" class="page">
+        <div class="card" style="border-left: 5px solid var(--pledge-color);">
+            <div class="card-title">🏦 股票質押 (連動庫存)</div>
+            
+            <div style="background:#f0f0ff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #e0e0ff;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:0.8rem; color:var(--pledge-color); font-weight:bold;">目前擔保品總市值</div>
+                        <div style="font-size:1.4rem; font-weight:800; color:var(--pledge-color);" id="disp_totalCollateralVal">****</div>
+                    </div>
+                    <button class="btn-action" style="background:var(--pledge-color); color:white;" onclick="openCollateralModal()">🔒 設定擔保品</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div style="display:flex; gap:8px;">
+                    <input type="number" id="pledgeAmount" placeholder="借款金額" style="flex:2">
+                    <input type="number" id="pledgeRate" placeholder="利率%" step="0.01" style="flex:1">
+                </div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <input type="date" id="pledgeDate" style="flex:2">
+                    <button class="btn-primary" style="flex:1; padding:10px; font-size:0.9rem;" onclick="addPledgeLoan()">借款</button>
+                </div>
+            </div>
+            <div id="pledgeList" style="margin-top:15px;"></div>
         </div>
-        <div class="control-item">
-            <div class="control-header"><span>質押-抵押品市值</span><span class="current-val" id="val_pledgeCol">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_pledgeCol" placeholder="增減市值" inputmode="decimal"><button class="btn-update" onclick="updateAsset('pledgeCol', 'delta_pledgeCol')">更新</button></div>
-        </div>
-        <div class="control-item">
-            <div class="control-header"><span>質押-借款金額</span><span class="current-val text-red" id="val_pledgeLoan">$$$</span></div>
-            <div class="input-row"><input type="number" id="delta_pledgeLoan" placeholder="增減借款" inputmode="decimal"><button class="btn-update" onclick="updateAsset('pledgeLoan', 'delta_pledgeLoan')">更新</button></div>
+
+        <div class="card">
+            <div class="card-title">💳 信貸/房貸 (本息攤還)</div>
+            <div class="form-group">
+                <label>新增貸款</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="number" id="creditPrincipal" placeholder="本金" style="flex:2">
+                    <input type="number" id="creditRate" placeholder="利率%" step="0.01" style="flex:1">
+                </div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <input type="number" id="creditTerm" placeholder="期數(月)" style="flex:1">
+                    <input type="date" id="creditStartDate" style="flex:2">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addCreditLoan()">新增信貸</button>
+            <div id="creditList" style="margin-top:15px;"></div>
         </div>
     </div>
 
-    <div class="danger-zone">
-        <button class="btn-reset" onclick="resetAll()">⚠️ 清除所有資料重來</button>
+    <div id="page-settings" class="page">
+        <div class="card">
+            <div class="card-title">資金管理</div>
+            <div class="form-group">
+                <label>校正現金餘額</label>
+                <input type="number" id="manualCash" placeholder="輸入目前實際現金">
+            </div>
+            <button class="btn-primary" onclick="setCash()">更新現金</button>
+        </div>
+        <div class="card">
+            <button class="btn-danger" onclick="resetAllData()">⚠️ 清除所有資料重來</button>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchPage('dashboard', this)"><span class="nav-icon">📊</span>總覽</div>
+        <div class="nav-item" onclick="switchPage('stocks', this)"><span class="nav-icon">📈</span>股票</div>
+        <div class="nav-item" onclick="switchPage('loans', this)"><span class="nav-icon">💸</span>貸款</div>
+        <div class="nav-item" onclick="switchPage('settings', this)"><span class="nav-icon">⚙️</span>設定</div>
+    </div>
+
+    <div id="priceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>更新市價 (連動維持率)</span>
+                <span onclick="closeModal('priceModal')" style="cursor:pointer;color:#999">×</span>
+            </div>
+            <div id="priceInputList"></div>
+            <button class="btn-primary" style="margin-top:20px" onclick="savePrices()">儲存並計算</button>
+        </div>
+    </div>
+
+    <div id="collateralModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>設定質押股數</span>
+                <span onclick="closeModal('collateralModal')" style="cursor:pointer;color:#999">×</span>
+            </div>
+            <div id="collateralInputList"></div>
+            <button class="btn-purple" style="margin-top:20px" onclick="saveCollateral()">儲存設定</button>
+        </div>
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
+        // 資料結構 V4.4: 
+        // pledgeCollateral (廢除數字，改為動態計算) 
+        // pledgedShares: { '2330': 1000, '0050': 200 } // 紀錄每支股票押了多少股
+        let data = { cash: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {} };
+        let isPrivacyMode = true; 
+
+        window.onload = () => {
+            if(localStorage.getItem('asset_v4')) {
+                let saved = JSON.parse(localStorage.getItem('asset_v4'));
+                if(!saved.prices) saved.prices = {};
+                if(!saved.pledgedShares) saved.pledgedShares = {};
+                data = saved;
+            }
+            document.getElementById('stockDate').valueAsDate = new Date();
+            document.getElementById('creditStartDate').valueAsDate = new Date();
+            document.getElementById('pledgeDate').valueAsDate = new Date();
+            updateUI();
+        };
+
+        function saveData() {
+            localStorage.setItem('asset_v4', JSON.stringify(data));
+            updateUI();
         }
 
-        let state = { salary: 0, dca: 0, repay: 0, cash: 0, tw1x: 0, tw2x: 0, us: 0, loans: 0, pledgeCol: 0, pledgeLoan: 0 };
-        // 隱私模式預設為開啟 (true)
-        let isPrivacyMode = true;
-
-        function loadState() {
-            const saved = localStorage.getItem('asset_tracker_v3');
-            if (saved) state = JSON.parse(saved);
-            render();
-        }
-        function saveState() {
-            localStorage.setItem('asset_tracker_v3', JSON.stringify(state));
-            render();
-        }
-        
-        // 隱私切換功能
         function togglePrivacy() {
             isPrivacyMode = !isPrivacyMode;
-            // 更新按鈕圖示
-            document.getElementById('eyeIcon').innerText = isPrivacyMode ? '🙈' : '👁️'; 
-            render(); // 重新渲染畫面
+            document.getElementById('eyeIcon').innerText = isPrivacyMode ? '🙈' : '👁️';
+            updateUI();
         }
 
-        // 格式化數字 (核心修改：增加隱私判斷)
-        function fmt(num, isSensitive = true) {
-            // 如果是敏感數據且隱私模式開啟，回傳屏蔽符號
-            if (isSensitive && isPrivacyMode) {
-                return '****'; // 或者用 $$$
-            }
+        function fmt(num, isMoney = true) {
+            if (isMoney && isPrivacyMode) return '****';
             return Math.round(num).toLocaleString();
         }
 
-        function updateAsset(key, inputId) {
-            const input = document.getElementById(inputId);
-            const val = parseFloat(input.value);
-            if (!isNaN(val)) { state[key] += val; input.value = ''; saveState(); }
-        }
-        function updateSetting(key, inputId) {
-            const input = document.getElementById(inputId);
-            const val = parseFloat(input.value);
-            if (!isNaN(val)) { state[key] = val; input.value = ''; saveState(); }
-        }
-
-        function render() {
-            // 1. 更新輸入區旁邊的目前數值 (這些也需要屏蔽)
-            const ids = ['salary','dca','repay','cash','tw1x','tw2x','us','loans','pledgeCol','pledgeLoan'];
-            ids.forEach(k => document.getElementById('val_'+k).innerText = fmt(state[k]));
-
-            const cashflow = state.salary - state.repay - state.dca;
-            const elCf = document.getElementById('disp_cashflow');
-            elCf.innerText = fmt(cashflow);
-            elCf.style.color = (isPrivacyMode || cashflow >= 0) ? (isPrivacyMode ? 'inherit' : 'var(--success)') : 'var(--danger)';
-
-            const totalTwStock = state.tw1x + state.tw2x;
-            const totalAssets = state.cash + totalTwStock + state.us + state.pledgeCol;
-            const totalDebts = state.loans + state.pledgeLoan;
-            const netWorth = totalAssets - totalDebts;
-            const totalExposure = state.cash + state.tw1x + (state.tw2x * 2) + state.us + state.pledgeCol;
-            
-            let leverage = 1;
-            if (netWorth > 0) leverage = totalExposure / netWorth;
-
-            document.getElementById('disp_totalAssets').innerText = fmt(totalAssets);
-            document.getElementById('disp_netWorth').innerText = fmt(netWorth);
-            document.getElementById('disp_twStock').innerText = fmt(totalTwStock);
-            document.getElementById('disp_usStock').innerText = fmt(state.us);
-            document.getElementById('disp_totalLoan').innerText = fmt(state.loans);
-            // 槓桿比通常可以顯示，不涉及具體金額，設為 false 不屏蔽
-            document.getElementById('disp_leverage').innerText = leverage.toFixed(2) + "x";
-
-            // 2. 質押監控邏輯
-            document.getElementById('disp_pledgeCollateral').innerText = fmt(state.pledgeCol);
-            document.getElementById('disp_pledgeLoan').innerText = fmt(state.pledgeLoan);
-            
-            const pBox = document.getElementById('pledgeBox');
-            const pStatus = document.getElementById('disp_pledgeStatus');
-            const pRate = document.getElementById('disp_maintRate');
-            const pIcon = document.getElementById('pledgeIcon');
-
-            pBox.classList.remove('bg-danger', 'bg-warning', 'bg-success');
-            pRate.classList.remove('text-green', 'text-red', 'text-blue');
-
-            if (state.pledgeLoan > 0) {
-                const rate = (state.pledgeCol / state.pledgeLoan) * 100;
-                
-                // 維持率永遠顯示數值，不屏蔽
-                pRate.innerText = rate.toFixed(2) + "%";
-                
-                if (rate < 160) {
-                    pBox.classList.add("bg-danger");
-                    pStatus.innerText = "⛔ 危險 (<160%)";
-                    pIcon.innerText = "🚨";
-                } else if (rate < 180) {
-                    pBox.classList.add("bg-warning");
-                    pStatus.innerText = "⚡ 警戒 (<180%)";
-                    pIcon.innerText = "⚠️";
+        function getInventory() {
+            let inv = {};
+            data.transactions.forEach(t => {
+                if(!inv[t.symbol]) inv[t.symbol] = { qty: 0, cost: 0, type: t.type };
+                if(t.action === 'buy') {
+                    let totalCost = (inv[t.symbol].cost * inv[t.symbol].qty) + (t.price * t.qty);
+                    inv[t.symbol].qty += t.qty;
+                    inv[t.symbol].cost = inv[t.symbol].qty > 0 ? totalCost / inv[t.symbol].qty : 0;
                 } else {
-                    pBox.classList.add("bg-success");
-                    pStatus.innerText = "✅ 安全 (>180%)";
-                    pRate.classList.add('text-green');
-                    pIcon.innerText = "🏦";
+                    inv[t.symbol].qty -= t.qty;
+                }
+            });
+            return inv;
+        }
+
+        function calcCredit(loan) {
+            let r = loan.rate / 100 / 12;
+            let n = loan.term;
+            let pmt = Math.round(loan.principal * (r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1));
+            let start = new Date(loan.startDate);
+            let now = new Date();
+            let monthsPassed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+            let monthsLeft = Math.max(0, n - monthsPassed);
+            let remainingPrincipal = Math.round(loan.principal * (monthsLeft / n)); 
+            return { pmt, monthsLeft, remainingPrincipal };
+        }
+
+        function calcPledge(p) {
+            let start = new Date(p.startDate);
+            let now = new Date();
+            let days = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+            let interest = Math.round(p.amount * (p.rate/100) * days / 365);
+            let isExpireWarning = days > 500;
+            return { days, interest, isExpireWarning };
+        }
+
+        // --- 交易邏輯 ---
+        function addStockTransaction() {
+            let type = document.getElementById('stockType').value;
+            let action = document.getElementById('transType').value;
+            let date = document.getElementById('stockDate').value;
+            let symbol = document.getElementById('stockSymbol').value.toUpperCase();
+            let price = parseFloat(document.getElementById('stockPrice').value);
+            let qty = parseFloat(document.getElementById('stockQty').value);
+            if(!symbol || !price || !qty) return alert('請填寫完整');
+            let total = price * qty;
+            if(action === 'buy') data.cash -= total;
+            else data.cash += total;
+            
+            data.prices[symbol] = price; // 同步更新市價
+            data.transactions.push({ id: Date.now(), type, action, symbol, date, price, qty });
+            saveData();
+            alert('交易已記錄');
+        }
+
+        function addCreditLoan() {
+            let principal = parseFloat(document.getElementById('creditPrincipal').value);
+            let rate = parseFloat(document.getElementById('creditRate').value);
+            let term = parseFloat(document.getElementById('creditTerm').value);
+            let startDate = document.getElementById('creditStartDate').value;
+            if(!principal) return;
+            data.cash += principal; 
+            data.loans.push({ id: Date.now(), type: 'credit', principal, rate, term, startDate });
+            saveData();
+        }
+
+        function addPledgeLoan() {
+            let amount = parseFloat(document.getElementById('pledgeAmount').value);
+            let rate = parseFloat(document.getElementById('pledgeRate').value);
+            let date = document.getElementById('pledgeDate').value;
+            if(!amount) return;
+            data.cash += amount; 
+            data.pledges.push({ id: Date.now(), amount, rate, startDate: date });
+            saveData();
+        }
+
+        function setCash() {
+            let val = parseFloat(document.getElementById('manualCash').value);
+            if(!isNaN(val)) { data.cash = val; saveData(); alert('現金已更新'); }
+        }
+
+        function deleteItem(type, id) {
+            if(!confirm('確定刪除?')) return;
+            if(type === 'trans') data.transactions = data.transactions.filter(x => x.id !== id);
+            if(type === 'loan') data.loans = data.loans.filter(x => x.id !== id);
+            if(type === 'pledge') data.pledges = data.pledges.filter(x => x.id !== id);
+            saveData(); 
+        }
+
+        function resetAllData() {
+            if(confirm('確定清除所有資料?')) { localStorage.removeItem('asset_v4'); location.reload(); }
+        }
+
+        // --- 價格 Modal ---
+        function openPriceModal() {
+            let inv = getInventory();
+            let container = document.getElementById('priceInputList');
+            container.innerHTML = '';
+            for(let sym in inv) {
+                if(inv[sym].qty > 0) {
+                    let currentP = data.prices[sym] || inv[sym].cost;
+                    container.innerHTML += `<div class="price-row"><span class="price-label">${sym}</span><input type="number" class="price-input price-update" id="price_${sym}" value="${currentP}" step="0.01"></div>`;
+                }
+            }
+            document.getElementById('priceModal').style.display = 'flex';
+        }
+
+        function savePrices() {
+            document.querySelectorAll('.price-update').forEach(input => {
+                let sym = input.id.split('_')[1];
+                let val = parseFloat(input.value);
+                if(!isNaN(val)) data.prices[sym] = val;
+            });
+            saveData();
+            closeModal('priceModal');
+        }
+
+        // --- 擔保品 Modal (New) ---
+        function openCollateralModal() {
+            let inv = getInventory();
+            let container = document.getElementById('collateralInputList');
+            container.innerHTML = '';
+            let hasStock = false;
+            for(let sym in inv) {
+                if(inv[sym].qty > 0) {
+                    hasStock = true;
+                    let currentPledged = data.pledgedShares[sym] || 0;
+                    container.innerHTML += `
+                        <div class="price-row">
+                            <div>
+                                <div class="price-label">${sym}</div>
+                                <div class="pledge-desc">持有 ${inv[sym].qty} 股</div>
+                            </div>
+                            <div class="pledge-input-group">
+                                <input type="number" class="price-input pledge-update" id="pledge_${sym}" value="${currentPledged}" placeholder="0">
+                                <div class="pledge-desc">質押股數</div>
+                            </div>
+                        </div>`;
+                }
+            }
+            if(!hasStock) container.innerHTML = '<div style="text-align:center;color:#999">無庫存可設定</div>';
+            document.getElementById('collateralModal').style.display = 'flex';
+        }
+
+        function saveCollateral() {
+            document.querySelectorAll('.pledge-update').forEach(input => {
+                let sym = input.id.split('_')[1];
+                let val = parseFloat(input.value);
+                if(!isNaN(val) && val > 0) data.pledgedShares[sym] = val;
+                else delete data.pledgedShares[sym];
+            });
+            saveData();
+            closeModal('collateralModal');
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // --- UI Update ---
+        function updateUI() {
+            document.getElementById('headerCash').innerText = fmt(data.cash);
+
+            let inv = getInventory();
+            let listHtml = '';
+            let twVal = 0, usVal = 0;
+            let totalCollateralVal = 0;
+
+            for(let sym in inv) {
+                if(inv[sym].qty > 0) {
+                    let marketPrice = data.prices[sym] || inv[sym].cost;
+                    let totalVal = marketPrice * inv[sym].qty;
+                    let costVal = inv[sym].cost * inv[sym].qty;
+                    let profit = totalVal - costVal;
+                    let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
+                    let profitSign = profit >= 0 ? '+' : '';
+                    
+                    if(inv[sym].type === 'tw') twVal += totalVal; else usVal += totalVal;
+
+                    // 計算該股質押市值
+                    let pledgedQty = data.pledgedShares[sym] || 0;
+                    if(pledgedQty > 0) {
+                        totalCollateralVal += pledgedQty * marketPrice;
+                    }
+
+                    listHtml += `
+                    <div class="list-item">
+                        <div>
+                            <div class="item-main">${sym} <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-sell'}">${inv[sym].type.toUpperCase()}</span> ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}</div>
+                            <div class="item-sub">均價 ${inv[sym].cost.toFixed(2)} | 市價 <b>${marketPrice}</b></div>
+                        </div>
+                        <div class="item-right">
+                            <div class="item-main">$${fmt(totalVal)}</div>
+                            <div class="profit-val ${profitClass}">${profitSign}${fmt(profit)}</div>
+                        </div>
+                    </div>`;
+                }
+            }
+            document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
+            document.getElementById('dashTwVal').innerText = fmt(twVal);
+            document.getElementById('dashUsVal').innerText = fmt(usVal);
+            document.getElementById('disp_totalCollateralVal').innerText = fmt(totalCollateralVal);
+
+            let loanHtml = '';
+            let totalDebt = 0;
+            data.loans.forEach(l => {
+                let info = calcCredit(l);
+                totalDebt += info.remainingPrincipal;
+                loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬</div><div class="item-sub">剩 ${info.monthsLeft} 期 | 月繳 $${fmt(info.pmt)}</div></div>
+                    <div class="item-right"><div class="item-main text-red">-$${fmt(info.remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
+            });
+            document.getElementById('creditList').innerHTML = loanHtml;
+
+            let pledgeHtml = '';
+            let totalPledgeLoan = 0;
+            data.pledges.forEach(p => {
+                let info = calcPledge(p);
+                totalPledgeLoan += p.amount;
+                let dateStyle = info.isExpireWarning ? 'color:red;font-weight:bold' : '';
+                pledgeHtml += `<div class="list-item"><div><div class="item-main">質押借款</div><div class="item-sub" style="${dateStyle}">${info.days}天 | 息 $${fmt(info.interest, false)}</div></div>
+                    <div class="item-right"><div class="item-main text-red">-$${fmt(p.amount)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('pledge', ${p.id})">刪除</button></div></div>`;
+            });
+            document.getElementById('pledgeList').innerHTML = pledgeHtml;
+            totalDebt += totalPledgeLoan;
+
+            let totalAssets = data.cash + twVal + usVal; // 資產 = 現金 + 股票總市值 (包含質押的)
+            let netWorth = totalAssets - totalDebt;
+            let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
+
+            document.getElementById('dashNetWorth').innerText = fmt(netWorth);
+            document.getElementById('dashAssets').innerText = fmt(totalAssets);
+            document.getElementById('dashDebts').innerText = fmt(totalDebt);
+            document.getElementById('dashLeverage').innerText = leverage + "x";
+
+            let statusBar = document.getElementById('stickyStatusBar');
+            let rateLabel = document.getElementById('statusLabel');
+            let rateDisplay = document.getElementById('disp_maintRate');
+            
+            if(totalPledgeLoan > 0) {
+                let rate = (totalCollateralVal / totalPledgeLoan) * 100;
+                rateDisplay.innerText = rate.toFixed(2) + "%";
+                statusBar.className = 'status-bar'; 
+                if(rate < 160) {
+                    statusBar.classList.add('status-danger');
+                    rateLabel.innerText = "🚨 追繳危險";
+                } else if (rate < 180) {
+                    statusBar.classList.add('status-warn');
+                    rateLabel.innerText = "⚠️ 注意水位";
+                } else {
+                    statusBar.classList.add('status-safe');
+                    rateLabel.innerText = "✅ 安全範圍";
                 }
             } else {
-                pRate.innerText = "--%"; 
-                pStatus.innerText = "未啟用";
-                pIcon.innerText = "🏦";
-                pRate.classList.add('text-blue');
+                rateDisplay.innerText = "--%";
+                rateLabel.innerText = "未啟用質押";
+                statusBar.className = 'status-bar status-neutral';
             }
         }
 
-        function resetAll() {
-            if(confirm("確定要刪除所有資料重新開始嗎？")) { localStorage.removeItem('asset_tracker_v3'); location.reload(); }
+        function switchPage(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
         }
-        window.onload = loadState;
     </script>
 </body>
 </html>
