@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>飲食紀錄 V6.1 (雲端版)</title>
+    <title>飲食紀錄 V6.2 (雲端修正版)</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -74,7 +74,6 @@
         #in_protein { color: #007aff; }  
         #in_deficit { color: #34c759; } 
 
-        /* 按鈕區 */
         .btn-group { display: flex; gap: 10px; margin-top: 30px; }
         
         .btn {
@@ -143,10 +142,14 @@
 
     <script>
         // ==========================================
-        //  https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec
+        //  ⚠️ 關鍵修改區：請把下方的網址換成你的 Apps Script 網址 ⚠️
+        //  注意：網址前後必須有雙引號 " "
         // ==========================================
+        
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec"; 
-        // 例如: "https://script.google.com/macros/s/AKfycbx.../exec"
+        
+        // 例如這樣才是對的：
+        // const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx....../exec";
 
 
         window.onload = function() {
@@ -191,13 +194,14 @@
                 protein: document.getElementById('in_protein').value
             };
 
-            // 簡單防呆
+            // 檢查是否填寫資料
             if(!data.weight && !data.calories) {
-                alert("至少輸入個體重或熱量吧？");
+                alert("請至少輸入體重或熱量資料！");
                 return;
             }
 
-            if(GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec" || GOOGLE_SCRIPT_URL === "") {
+            // 檢查網址是否已替換 (這是你剛剛看到的錯誤原因)
+            if(GOOGLE_SCRIPT_URL.includes("你的AppsScript網址") || GOOGLE_SCRIPT_URL === "") {
                 alert("請先修改程式碼，填入你的 Google Apps Script 網址！");
                 return;
             }
@@ -216,13 +220,14 @@
                 body: JSON.stringify(data)
             })
             .then(response => {
+                // 因 no-cors 模式無法讀取回傳內容，只要沒報錯就視為成功
                 alert("✅ 上傳成功！");
                 btn.disabled = false;
                 btn.innerText = "☁️ 上傳紀錄";
             })
             .catch(error => {
                 console.error("Error:", error);
-                alert("❌ 上傳失敗，請檢查網路或網址。");
+                alert("❌ 上傳失敗，請檢查網路或網址是否正確。");
                 btn.disabled = false;
                 btn.innerText = "☁️ 上傳紀錄";
             });
