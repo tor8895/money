@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>飲食紀錄 V6.2 (雲端修正版)</title>
+    <title>飲食紀錄 V6.2.1 (雲端修正版)</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -142,15 +142,9 @@
 
     <script>
         // ==========================================
-        //  ⚠️ 關鍵修改區：請把下方的網址換成你的 Apps Script 網址 ⚠️
-        //  注意：網址前後必須有雙引號 " "
+        //  已填入您的 Apps Script 網址
         // ==========================================
-        
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec"; 
-        
-        // 例如這樣才是對的：
-        // const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx....../exec";
-
 
         window.onload = function() {
             loadData();
@@ -200,9 +194,11 @@
                 return;
             }
 
-            // 檢查網址是否已替換 (這是你剛剛看到的錯誤原因)
-            if(GOOGLE_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec") || GOOGLE_SCRIPT_URL === "") {
-                alert("https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec");
+            // --- 修正後的檢查邏輯 ---
+            // 這裡改成檢查是否為空，或是包含了"請填入"這種預設文字
+            // 您已經填好了，所以這裡會通過
+            if(GOOGLE_SCRIPT_URL === "" || GOOGLE_SCRIPT_URL.includes("您的AppsScript網址")) {
+                alert("請先修改程式碼，填入你的 Google Apps Script 網址！");
                 return;
             }
 
@@ -215,7 +211,7 @@
                 method: "POST",
                 mode: "no-cors", // 重要：解決跨域問題
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "text/plain;charset=utf-8"
                 },
                 body: JSON.stringify(data)
             })
