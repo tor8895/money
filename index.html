@@ -3,770 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>資產槓桿記錄 V4.8</title>
+    <title>飲食紀錄 V6.1 (雲端版)</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <meta name="theme-color" content="#007aff">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ffffff">
 
     <style>
         :root {
-            --primary: #007aff; --success: #34c759; --danger: #ff3b30; --warning: #ffcc00;
-            --bg: #f2f2f7; --card-bg: #ffffff; --text-gray: #8e8e93; --text-dark: #1c1c1e;
-            --up: #ff3b30; --down: #34c759; --pledge-color: #5856d6;
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --primary: #007aff;
+            --text-main: #1c1c1e;
+            --text-sub: #8e8e93;
+            --input-bg: #f2f2f7;
         }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg); margin: 0; padding: 0; color: var(--text-dark);
-            padding-bottom: 90px; padding-top: 130px; user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro TC", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- 頂部固定區 --- */
-        .top-fixed-area { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .app-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.05); height: 40px; }
-        .app-title { font-size: 1.1rem; font-weight: 800; color: var(--text-dark); }
-        .btn-privacy { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 0; }
+        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 25px; font-weight: 800; letter-spacing: 1px; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .label {
+            font-size: 0.95rem;
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            border: none;
+            background: var(--input-bg);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+            text-align: center;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.2s;
+            font-family: monospace;
+        }
+        input:focus { background: #e5e5ea; transform: scale(1.01); }
         
-        .status-bar { background: var(--card-bg); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s ease, color 0.3s ease; }
-        .main-metric { display: flex; flex-direction: column; }
-        .metric-label { font-size: 0.75rem; opacity: 0.8; font-weight: 600; margin-bottom: 2px; }
-        .metric-value { font-size: 2rem; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+        #in_weight { color: #1c1c1e; }
+        #in_calories { color: #ff9f0a; } 
+        #in_protein { color: #007aff; }  
+        #in_deficit { color: #34c759; } 
+
+        /* 按鈕區 */
+        .btn-group { display: flex; gap: 10px; margin-top: 30px; }
         
-        .cash-metric { text-align: right; display: flex; flex-direction: column; justify-content: center; }
-        .cash-row { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;}
-        .cash-tag { font-size: 0.65rem; padding: 1px 4px; border-radius: 4px; color: white; font-weight: bold;}
-        .bg-twd { background: #999; }
-        .bg-usd { background: #007aff; }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
 
-        .status-safe { background: var(--success); color: white; }
-        .status-warn { background: var(--warning); color: #333; }
-        .status-danger { background: var(--danger); color: white; }
-        .status-neutral { background: var(--card-bg); color: var(--text-dark); }
+        .btn-upload {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.3);
+        }
+        .btn-upload:active { transform: scale(0.95); opacity: 0.8; }
+        .btn-upload:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
 
-        /* --- 內容區域 --- */
-        .page { display: none; padding: 15px; animation: fadeIn 0.3s; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-reset {
+            background: white;
+            border: 2px solid #ff3b30;
+            color: #ff3b30;
+        }
+        .btn-reset:active { background: #fff0f0; }
 
-        /* --- 卡片與列表 --- */
-        .card { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .card-title { font-size: 0.95rem; color: var(--text-gray); font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
-        
-        .list-item { padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
-        .list-item:last-child { border-bottom: none; }
-        .item-main { font-weight: 700; font-size: 1.05rem; }
-        .item-sub { font-size: 0.85rem; color: var(--text-gray); margin-top: 2px;}
-        .item-right { text-align: right; }
-        
-        .pledge-badge { font-size: 0.75rem; color: var(--pledge-color); background: #f0f0ff; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
-        .profit-val { font-size: 0.9rem; font-weight: 600; }
-        .profit-up { color: var(--up); }
-        .profit-down { color: var(--down); }
-
-        .tag { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; color: white; margin-right: 6px; vertical-align: middle;}
-        .tag-buy { background: var(--danger); } 
-        .tag-sell { background: var(--success); }
-        .tag-us { background: #007aff; } 
-
-        /* 總覽格 */
-        .big-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        .big-stat-card { background: var(--card-bg); border-radius: 20px; padding: 20px 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; min-height: 110px; }
-        .big-stat-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 8px; font-weight: 600; }
-        .big-stat-val { font-size: 1.6rem; font-weight: 800; color: var(--text-dark); word-break: break-all; line-height: 1.1; }
-        .full-width-card { grid-column: span 2; background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
-
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 0.85rem; color: var(--text-gray); margin-bottom: 6px; font-weight: 600;}
-        input, select { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; background: #fff; font-weight: 600;}
-        input:focus { outline: none; border-color: var(--primary); }
-        
-        .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.2); }
-        .btn-purple { width: 100%; background: var(--pledge-color); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
-        .btn-danger { width: 100%; background: var(--danger); color: white; border: none; padding: 14px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; margin-top: 20px;}
-        .btn-action { font-size: 0.85rem; padding: 6px 12px; background: #f0f0f0; border: none; border-radius: 15px; font-weight: bold; color: var(--primary); cursor: pointer; }
-
-        /* Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 85%; max-width: 360px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
-        .modal-header { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; display: flex; justify-content: space-between; }
-        .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom:10px; border-bottom:1px solid #eee; }
-        .price-label { font-weight: bold; font-size: 1rem; }
-        .price-input { width: 100px; text-align: right; padding: 8px; font-size: 1rem; }
-        .pledge-input-group { display: flex; flex-direction: column; align-items: flex-end;}
-        .pledge-desc { font-size: 0.75rem; color: #999; margin-top: 2px;}
-        .exchange-box { background: #f8f8fa; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e5e5ea; }
-
-        /* 底部導航 */
-        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); border-top: 1px solid #e5e5ea; display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 200; backdrop-filter: blur(10px); }
-        .nav-item { flex: 1; text-align: center; padding: 8px 0; color: #999; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
-        .nav-item.active { color: var(--primary); font-weight: 700; }
-        .nav-icon { font-size: 1.5rem; display: block; margin-bottom: 2px; }
-
-        .text-red { color: var(--danger) !important; }
-        .text-green { color: var(--success) !important; }
-        .text-blue { color: var(--primary) !important; }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="top-fixed-area">
-        <div class="app-bar">
-            <div class="app-title">資產槓桿記錄 V4.8</div>
-            <button class="btn-privacy" onclick="togglePrivacy()">
-                <span id="eyeIcon">🙈</span>
-            </button>
+    <h1>今日飲食數據</h1>
+
+    <div class="grid-container">
+        <div class="card">
+            <label class="label">⚖️ 體重 (kg)</label>
+            <input type="number" id="in_weight" placeholder="0.0" inputmode="decimal" step="0.1" oninput="saveData()">
         </div>
-        <div class="status-bar status-neutral" id="stickyStatusBar">
-            <div class="main-metric">
-                <span class="metric-label" id="statusLabel">維持率</span>
-                <span class="metric-value" id="disp_maintRate">--%</span>
-            </div>
-            <div class="cash-metric">
-                <div class="cash-row">
-                    <span class="cash-val" id="headerCashTwd">****</span>
-                    <span class="cash-tag bg-twd">TWD</span>
-                </div>
-                <div class="cash-row">
-                    <span class="cash-val" id="headerCashUsd">****</span>
-                    <span class="cash-tag bg-usd">USD</span>
-                </div>
-            </div>
+        <div class="card">
+            <label class="label">🔥 赤字 (kcal)</label>
+            <input type="number" id="in_deficit" placeholder="0" inputmode="numeric" oninput="saveData()">
         </div>
     </div>
 
-    <div id="page-dashboard" class="page active">
-        <div class="big-stats-grid">
-            <div class="big-stat-card">
-                <span class="big-stat-label">淨資產 (Net)</span>
-                <span class="big-stat-val text-green" id="dashNetWorth">****</span>
-            </div>
-            <div class="big-stat-card">
-                <span class="big-stat-label">總資產 (Assets)</span>
-                <span class="big-stat-val text-blue" id="dashAssets">****</span>
-            </div>
-            <div class="big-stat-card">
-                <span class="big-stat-label">總負債 (Debts)</span>
-                <span class="big-stat-val text-red" id="dashDebts">****</span>
-            </div>
-            <div class="big-stat-card">
-                <span class="big-stat-label">槓桿率 (X)</span>
-                <span class="big-stat-val" id="dashLeverage">1.0x</span>
-            </div>
+    <div class="grid-container">
+        <div class="card">
+            <label class="label">🍔 熱量 (kcal)</label>
+            <input type="number" id="in_calories" placeholder="0" inputmode="numeric" oninput="saveData()">
         </div>
-
-        <div class="full-width-card">
-            <div class="card-title">資產分佈 (以市價計算)</div>
-            <div class="list-item">
-                <span class="item-main">🇹🇼 台股市值</span>
-                <span class="item-right item-main" id="dashTwVal">****</span>
-            </div>
-            <div class="list-item">
-                <span class="item-main">🇺🇸 美股市值 (TWD)</span>
-                <span class="item-right item-main" id="dashUsVal">****</span>
-            </div>
+        <div class="card">
+            <label class="label">🥩 蛋白質 (g)</label>
+            <input type="number" id="in_protein" placeholder="0" inputmode="numeric" oninput="saveData()">
         </div>
     </div>
 
-    <div id="page-stocks" class="page">
-        <div class="card">
-            <div class="card-title">新增交易 (自動扣對應幣別)</div>
-            <div class="form-group">
-                <div style="display:flex; gap:10px;">
-                    <select id="stockType" style="flex:1" onchange="updateStockInputLabel()"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select>
-                    <select id="transType" style="flex:1"><option value="buy">買入</option><option value="sell">賣出</option></select>
-                </div>
-            </div>
-            <div class="form-group">
-                <div style="display:flex; gap:10px;">
-                    <input type="date" id="stockDate" style="flex:1">
-                    <input type="text" id="stockSymbol" placeholder="代號 (ex: AAPL)" style="flex:1">
-                </div>
-            </div>
-            <div class="form-group">
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="stockPrice" placeholder="價格" step="0.01" style="flex:1">
-                    <input type="number" id="stockQty" placeholder="股數" style="flex:1">
-                </div>
-                <div style="font-size:0.8rem; color:#666; margin-top:5px; text-align:right;">
-                    <span id="priceCurrencyHint">以台幣扣款</span>
-                </div>
-            </div>
-            <button class="btn-primary" onclick="addStockTransaction()">記錄交易</button>
-        </div>
-
-        <div class="card">
-            <div class="card-title">
-                <span>庫存損益</span>
-                <button class="btn-action" onclick="openPriceModal()">📝 更新市價</button>
-            </div>
-            <div id="stockInventoryList"></div>
-        </div>
-    </div>
-
-    <div id="page-loans" class="page">
-        <div class="card" style="border-left: 5px solid var(--pledge-color);">
-            <div class="card-title">🏦 股票質押 (連動庫存)</div>
-            
-            <div style="background:#f0f0ff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #e0e0ff;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size:0.8rem; color:var(--pledge-color); font-weight:bold;">目前擔保品總市值 (TWD)</div>
-                        <div style="font-size:1.4rem; font-weight:800; color:var(--pledge-color);" id="disp_totalCollateralVal">****</div>
-                    </div>
-                    <button class="btn-action" style="background:var(--pledge-color); color:white;" onclick="openCollateralModal()">🔒 設定擔保品</button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <div style="display:flex; gap:8px;">
-                    <input type="number" id="pledgeAmount" placeholder="借款金額 (TWD)" style="flex:2">
-                    <input type="number" id="pledgeRate" placeholder="利率%" step="0.01" style="flex:1">
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <input type="date" id="pledgeDate" style="flex:2">
-                    <button class="btn-primary" style="flex:1; padding:10px; font-size:0.9rem;" onclick="addPledgeLoan()">借款</button>
-                </div>
-            </div>
-            <div id="pledgeList" style="margin-top:15px;"></div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">💳 信貸/房貸 (每月自動扣款)</div>
-            <div class="form-group">
-                <label>新增貸款 (TWD)</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="number" id="creditPrincipal" placeholder="本金" style="flex:2">
-                    <input type="number" id="creditRate" placeholder="利率%" step="0.01" style="flex:1">
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <input type="number" id="creditTerm" placeholder="期數(月)" style="flex:1">
-                    <input type="number" id="creditDeductDay" placeholder="每月扣款日(ex:20)" style="flex:1">
-                </div>
-                <div style="font-size:0.8rem; color:#666; margin-top:5px;">* 設定扣款日後，APP會自動從台幣餘額扣除本利和並減少期數。</div>
-            </div>
-            <button class="btn-primary" onclick="addCreditLoan()">新增信貸</button>
-            <div id="creditList" style="margin-top:15px;"></div>
-        </div>
-    </div>
-
-    <div id="page-settings" class="page">
-        <div class="card">
-            <div class="card-title">💱 換匯中心</div>
-            <div class="exchange-box">
-                <div class="form-group">
-                    <label>交易方向</label>
-                    <div style="display:flex; gap:10px;">
-                        <select id="exchangeDir" style="font-weight:bold;">
-                            <option value="twd_to_usd">買入美元 (TWD -> USD)</option>
-                            <option value="usd_to_twd">賣出美元 (USD -> TWD)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>匯率</label>
-                    <input type="number" id="exchangeRateInput" placeholder="成交匯率" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>交易金額 (原幣)</label>
-                    <input type="number" id="exchangeAmount" placeholder="輸入賣出的金額">
-                </div>
-                <button class="btn-primary" onclick="exchangeCurrency()">確認換匯</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">匯率設定 (用於估值)</div>
-            <div class="form-group">
-                <label>目前參考匯率</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="settingExchangeRate" placeholder="例如 32.5" step="0.01">
-                    <button class="btn-primary" style="width:auto;" onclick="saveExchangeRate()">儲存</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">資金增減 (調整現有餘額)</div>
-            <div class="form-group">
-                <label>台幣 (TWD) 異動</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="adjCashTwd" placeholder="+存入 / -領出">
-                    <button class="btn-primary" style="width:auto;" onclick="adjustCash('twd')">執行</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>美元 (USD) 異動</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="adjCashUsd" placeholder="+存入 / -領出">
-                    <button class="btn-primary" style="width:auto;" onclick="adjustCash('usd')">執行</button>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <button class="btn-danger" onclick="resetAllData()">⚠️ 清除所有資料重來</button>
-        </div>
-    </div>
-
-    <div class="nav-bar">
-        <div class="nav-item active" onclick="switchPage('dashboard', this)"><span class="nav-icon">📊</span>總覽</div>
-        <div class="nav-item" onclick="switchPage('stocks', this)"><span class="nav-icon">📈</span>股票</div>
-        <div class="nav-item" onclick="switchPage('loans', this)"><span class="nav-icon">💸</span>貸款</div>
-        <div class="nav-item" onclick="switchPage('settings', this)"><span class="nav-icon">⚙️</span>設定</div>
-    </div>
-
-    <div id="priceModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>更新市價</span>
-                <span onclick="closeModal('priceModal')" style="cursor:pointer;color:#999">×</span>
-            </div>
-            <div id="priceInputList"></div>
-            <button class="btn-primary" style="margin-top:20px" onclick="savePrices()">儲存並計算</button>
-        </div>
-    </div>
-
-    <div id="collateralModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span>設定質押股數</span>
-                <span onclick="closeModal('collateralModal')" style="cursor:pointer;color:#999">×</span>
-            </div>
-            <div id="collateralInputList"></div>
-            <button class="btn-purple" style="margin-top:20px" onclick="saveCollateral()">儲存設定</button>
-        </div>
+    <div class="btn-group">
+        <button class="btn btn-reset" onclick="resetData()">🗑️ 清空</button>
+        <button class="btn btn-upload" id="btnUpload" onclick="uploadToSheet()">☁️ 上傳紀錄</button>
     </div>
 
     <script>
-        let data = { cashTwd: 0, cashUsd: 0, transactions: [], loans: [], pledges: [], prices: {}, pledgedShares: {}, exchangeRate: 32.5 };
-        let isPrivacyMode = true; 
+        // ==========================================
+        //  https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec
+        // ==========================================
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec"; 
+        // 例如: "https://script.google.com/macros/s/AKfycbx.../exec"
 
-        window.onload = () => {
-            if(localStorage.getItem('asset_v4')) {
-                let saved = JSON.parse(localStorage.getItem('asset_v4'));
-                if(saved.cash !== undefined) {
-                    saved.cashTwd = saved.cash;
-                    saved.cashUsd = 0;
-                    delete saved.cash;
-                }
-                if(!saved.prices) saved.prices = {};
-                if(!saved.pledgedShares) saved.pledgedShares = {};
-                if(!saved.exchangeRate) saved.exchangeRate = 32.5; 
-                data = saved;
-            }
-            document.getElementById('stockDate').valueAsDate = new Date();
-            document.getElementById('creditStartDate').valueAsDate = new Date();
-            document.getElementById('pledgeDate').valueAsDate = new Date();
-            document.getElementById('settingExchangeRate').value = data.exchangeRate;
-            document.getElementById('exchangeRateInput').value = data.exchangeRate;
-            
-            checkLoanDeductions(); 
-            updateUI();
+
+        window.onload = function() {
+            loadData();
         };
 
+        function loadData() {
+            const saved = JSON.parse(localStorage.getItem('diet_record_v6')) || {};
+            if (saved.weight) document.getElementById('in_weight').value = saved.weight;
+            if (saved.deficit) document.getElementById('in_deficit').value = saved.deficit;
+            if (saved.calories) document.getElementById('in_calories').value = saved.calories;
+            if (saved.protein) document.getElementById('in_protein').value = saved.protein;
+        }
+
         function saveData() {
-            localStorage.setItem('asset_v4', JSON.stringify(data));
-            updateUI();
+            const data = {
+                weight: document.getElementById('in_weight').value,
+                deficit: document.getElementById('in_deficit').value,
+                calories: document.getElementById('in_calories').value,
+                protein: document.getElementById('in_protein').value
+            };
+            localStorage.setItem('diet_record_v6', JSON.stringify(data));
         }
 
-        // --- 自動扣款 ---
-        function checkLoanDeductions() {
-            let today = new Date();
-            let currentMonthStr = `${today.getFullYear()}-${today.getMonth()+1}`;
-            let currentDay = today.getDate();
-            let deducted = false;
+        function resetData() {
+            if(confirm("確定要清空所有欄位嗎？")) {
+                document.getElementById('in_weight').value = '';
+                document.getElementById('in_deficit').value = '';
+                document.getElementById('in_calories').value = '';
+                document.getElementById('in_protein').value = '';
+                localStorage.removeItem('diet_record_v6');
+            }
+        }
 
-            data.loans.forEach(loan => {
-                if(loan.deductDay && loan.remainingTerms > 0 && loan.lastPaidMonth !== currentMonthStr) {
-                    if(currentDay >= loan.deductDay) {
-                        data.cashTwd -= loan.pmt;
-                        loan.remainingTerms -= 1;
-                        loan.lastPaidMonth = currentMonthStr; 
-                        deducted = true;
-                    }
-                }
+        // --- 上傳功能 ---
+        function uploadToSheet() {
+            const btn = document.getElementById('btnUpload');
+            const data = {
+                weight: document.getElementById('in_weight').value,
+                deficit: document.getElementById('in_deficit').value,
+                calories: document.getElementById('in_calories').value,
+                protein: document.getElementById('in_protein').value
+            };
+
+            // 簡單防呆
+            if(!data.weight && !data.calories) {
+                alert("至少輸入個體重或熱量吧？");
+                return;
+            }
+
+            if(GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzNfXRjBSvqWSP7W-TGtGYj8PEEmO5wzHiGlzr074m0pqTNWRmd6ndwxHRCMH5VI2At-A/exec" || GOOGLE_SCRIPT_URL === "") {
+                alert("請先修改程式碼，填入你的 Google Apps Script 網址！");
+                return;
+            }
+
+            // UI 狀態更新
+            btn.disabled = true;
+            btn.innerText = "上傳中...";
+
+            // 使用 fetch 發送 POST 請求
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // 重要：解決跨域問題
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                alert("✅ 上傳成功！");
+                btn.disabled = false;
+                btn.innerText = "☁️ 上傳紀錄";
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                alert("❌ 上傳失敗，請檢查網路或網址。");
+                btn.disabled = false;
+                btn.innerText = "☁️ 上傳紀錄";
             });
-
-            if(deducted) {
-                saveData();
-                alert(`💰 已自動扣除本月信貸還款，期數已更新。`);
-            }
-        }
-
-        function togglePrivacy() {
-            isPrivacyMode = !isPrivacyMode;
-            document.getElementById('eyeIcon').innerText = isPrivacyMode ? '🙈' : '👁️';
-            updateUI();
-        }
-
-        function fmt(num, isMoney = true) {
-            if (isMoney && isPrivacyMode) return '****';
-            return Math.round(num).toLocaleString();
-        }
-        
-        function fmtUsd(num, isMoney = true) {
-            if (isMoney && isPrivacyMode) return '****';
-            return num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        }
-
-        function getInventory() {
-            let inv = {};
-            data.transactions.forEach(t => {
-                if(!inv[t.symbol]) inv[t.symbol] = { qty: 0, cost: 0, type: t.type };
-                if(t.action === 'buy') {
-                    let totalCost = (inv[t.symbol].cost * inv[t.symbol].qty) + (t.price * t.qty);
-                    inv[t.symbol].qty += t.qty;
-                    inv[t.symbol].cost = inv[t.symbol].qty > 0 ? totalCost / inv[t.symbol].qty : 0;
-                } else {
-                    inv[t.symbol].qty -= t.qty;
-                }
-            });
-            return inv;
-        }
-
-        // PV函數：計算剩餘本金
-        function calcRemainingPrincipal(loan) {
-            if (loan.remainingTerms <= 0) return 0;
-            let r = loan.rate / 100 / 12;
-            let n = loan.remainingTerms;
-            let pv = loan.pmt * (1 - Math.pow(1+r, -n)) / r;
-            return Math.round(pv);
-        }
-
-        function calcPledge(p) {
-            let start = new Date(p.startDate);
-            let now = new Date();
-            let days = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-            let interest = Math.round(p.amount * (p.rate/100) * days / 365);
-            let isExpireWarning = days > 500;
-            return { days, interest, isExpireWarning };
-        }
-
-        // --- 交易邏輯 ---
-        function updateStockInputLabel() {
-            let type = document.getElementById('stockType').value;
-            let hint = document.getElementById('priceCurrencyHint');
-            if(type === 'us') hint.innerText = `以美元 (USD) 計價，將扣除美元餘額`;
-            else hint.innerText = "以台幣 (TWD) 計價，將扣除台幣餘額";
-        }
-
-        function addStockTransaction() {
-            let type = document.getElementById('stockType').value;
-            let action = document.getElementById('transType').value;
-            let date = document.getElementById('stockDate').value;
-            let symbol = document.getElementById('stockSymbol').value.toUpperCase();
-            let price = parseFloat(document.getElementById('stockPrice').value);
-            let qty = parseFloat(document.getElementById('stockQty').value);
-            if(!symbol || !price || !qty) return alert('請填寫完整');
-            
-            // --- V4.8 防呆：賣出檢查 ---
-            if (action === 'sell') {
-                let inv = getInventory();
-                let currentQty = (inv[symbol] && inv[symbol].qty) || 0;
-                if (currentQty < qty) {
-                    alert(`❌ 交易失敗：庫存不足！\n目前持有: ${currentQty} 股\n欲賣出: ${qty} 股`);
-                    return;
-                }
-            }
-
-            let total = price * qty;
-
-            if (type === 'us') {
-                if(action === 'buy') data.cashUsd -= total; else data.cashUsd += total;
-            } else {
-                if(action === 'buy') data.cashTwd -= total; else data.cashTwd += total;
-            }
-            
-            data.prices[symbol] = price; 
-            data.transactions.push({ id: Date.now(), type, action, symbol, date, price, qty });
-            saveData();
-            alert('交易已記錄');
-        }
-
-        function exchangeCurrency() {
-            let dir = document.getElementById('exchangeDir').value;
-            let rate = parseFloat(document.getElementById('exchangeRateInput').value);
-            let amount = parseFloat(document.getElementById('exchangeAmount').value);
-
-            if(!rate || !amount) return alert('請填寫匯率與金額');
-
-            if (dir === 'twd_to_usd') {
-                data.cashTwd -= amount;
-                data.cashUsd += (amount / rate);
-                alert(`已換匯：扣除 NT$${amount}，獲得 $${(amount/rate).toFixed(2)}`);
-            } else {
-                data.cashUsd -= amount;
-                data.cashTwd += (amount * rate);
-                alert(`已換匯：扣除 $${amount}，獲得 NT$${Math.round(amount*rate)}`);
-            }
-            data.exchangeRate = rate;
-            saveData();
-        }
-
-        function addCreditLoan() {
-            let principal = parseFloat(document.getElementById('creditPrincipal').value);
-            let rate = parseFloat(document.getElementById('creditRate').value);
-            let term = parseFloat(document.getElementById('creditTerm').value);
-            let deductDay = parseInt(document.getElementById('creditDeductDay').value);
-            
-            if(!principal || !term) return;
-            
-            let r = rate / 100 / 12;
-            let pmt = Math.round(principal * (r * Math.pow(1+r, term)) / (Math.pow(1+r, term) - 1));
-
-            data.cashTwd += principal; 
-            data.loans.push({ 
-                id: Date.now(), type: 'credit', principal, rate, 
-                totalTerms: term, remainingTerms: term, 
-                pmt: pmt, deductDay: deductDay || null, 
-                lastPaidMonth: "" 
-            });
-            saveData();
-        }
-
-        function addPledgeLoan() {
-            let amount = parseFloat(document.getElementById('pledgeAmount').value);
-            let rate = parseFloat(document.getElementById('pledgeRate').value);
-            let date = document.getElementById('pledgeDate').value;
-            if(!amount) return;
-            data.cashTwd += amount; 
-            data.pledges.push({ id: Date.now(), amount, rate, startDate: date });
-            saveData();
-        }
-
-        function adjustCash(type) {
-            let id = type === 'twd' ? 'adjCashTwd' : 'adjCashUsd';
-            let val = parseFloat(document.getElementById(id).value);
-            
-            if(!isNaN(val) && val !== 0) {
-                if(type === 'twd') data.cashTwd += val;
-                else data.cashUsd += val;
-                
-                saveData();
-                document.getElementById(id).value = ''; 
-                alert('餘額已更新');
-            }
-        }
-        
-        function saveExchangeRate() {
-            let val = parseFloat(document.getElementById('settingExchangeRate').value);
-            if(!isNaN(val) && val > 0) {
-                data.exchangeRate = val;
-                saveData();
-                alert('參考匯率已更新');
-            }
-        }
-
-        function deleteItem(type, id) {
-            if(!confirm('確定刪除?')) return;
-            if(type === 'trans') data.transactions = data.transactions.filter(x => x.id !== id);
-            if(type === 'loan') data.loans = data.loans.filter(x => x.id !== id);
-            if(type === 'pledge') data.pledges = data.pledges.filter(x => x.id !== id);
-            saveData(); 
-        }
-
-        function resetAllData() {
-            if(confirm('確定清除所有資料?')) { localStorage.removeItem('asset_v4'); location.reload(); }
-        }
-
-        // --- UI Update ---
-        function updateUI() {
-            document.getElementById('headerCashTwd').innerText = fmt(data.cashTwd);
-            document.getElementById('headerCashUsd').innerText = fmtUsd(data.cashUsd);
-
-            let inv = getInventory();
-            let listHtml = '';
-            let twVal = 0;
-            let usValUsd = 0; 
-            let totalCollateralVal = 0;
-
-            for(let sym in inv) {
-                if(inv[sym].qty > 0) {
-                    let marketPrice = data.prices[sym] || inv[sym].cost;
-                    let totalVal = marketPrice * inv[sym].qty;
-                    let costVal = inv[sym].cost * inv[sym].qty;
-                    let profit = totalVal - costVal;
-                    
-                    let currency = inv[sym].type === 'us' ? '$' : 'NT$';
-                    let displayVal = fmt(totalVal, true); 
-                    
-                    if(inv[sym].type === 'tw') {
-                        twVal += totalVal;
-                    } else {
-                        usValUsd += totalVal; 
-                        displayVal = `$${fmtUsd(totalVal)}`; 
-                    }
-                    
-                    let profitClass = profit >= 0 ? 'profit-up' : 'profit-down';
-                    let profitSign = profit >= 0 ? '+' : '';
-
-                    let pledgedQty = data.pledgedShares[sym] || 0;
-                    if(pledgedQty > 0) {
-                        let pledgeVal = pledgedQty * marketPrice;
-                        if(inv[sym].type === 'us') pledgeVal *= data.exchangeRate;
-                        totalCollateralVal += pledgeVal;
-                    }
-
-                    // --- V4.8 顯示優化：股數加粗 ---
-                    listHtml += `
-                    <div class="list-item">
-                        <div>
-                            <div class="item-main">
-                                ${sym} <span style="font-weight:400; font-size:0.9rem;">(${inv[sym].qty.toLocaleString()}股)</span>
-                                <span class="tag ${inv[sym].type==='tw'?'tag-buy':'tag-us'}">${inv[sym].type.toUpperCase()}</span> 
-                                ${pledgedQty>0 ? `<span class="pledge-badge">🔒 ${pledgedQty}</span>` : ''}
-                            </div>
-                            <div class="item-sub">
-                                均 ${currency}${inv[sym].cost.toFixed(2)} | 市價 <b>${marketPrice}</b>
-                            </div>
-                        </div>
-                        <div class="item-right">
-                            <div class="item-main">${displayVal}</div>
-                            <div class="profit-val ${profitClass}">${profitSign}${currency}${fmtUsd(profit)}</div>
-                        </div>
-                    </div>`;
-                }
-            }
-            document.getElementById('stockInventoryList').innerHTML = listHtml || '<div style="text-align:center;color:#ccc;padding:10px;">無庫存</div>';
-            
-            let usValTwd = usValUsd * data.exchangeRate;
-            let cashUsdToTwd = data.cashUsd * data.exchangeRate;
-
-            document.getElementById('dashTwVal').innerText = fmt(twVal);
-            document.getElementById('dashUsVal').innerText = `$${fmtUsd(usValUsd)} / NT$${fmt(usValTwd)}`;
-            document.getElementById('disp_totalCollateralVal').innerText = fmt(totalCollateralVal);
-
-            let loanHtml = '';
-            let totalDebt = 0;
-            data.loans.forEach(l => {
-                let remainingPrincipal = calcRemainingPrincipal(l);
-                totalDebt += remainingPrincipal;
-                let dayText = l.deductDay ? `<span style="font-size:0.7rem;color:var(--primary);background:#eef;padding:2px 4px;border-radius:4px;">每月${l.deductDay}號扣</span>` : '';
-                
-                if(l.remainingTerms <= 0) {
-                    loanHtml += `<div class="list-item" style="opacity:0.5"><div><div class="item-main">信貸 (已結清)</div><div class="item-sub">本金 ${Math.round(l.principal/10000)}萬</div></div><div class="item-right"><div class="item-main text-green">結清</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
-                } else {
-                    loanHtml += `<div class="list-item"><div><div class="item-main">信貸 ${Math.round(l.principal/10000)}萬 ${dayText}</div><div class="item-sub">剩 ${l.remainingTerms} 期 | 月繳 $${fmt(l.pmt)}</div></div>
-                        <div class="item-right"><div class="item-main text-red">-$${fmt(remainingPrincipal)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('loan', ${l.id})">刪除</button></div></div>`;
-                }
-            });
-            document.getElementById('creditList').innerHTML = loanHtml;
-
-            let pledgeHtml = '';
-            let totalPledgeLoan = 0;
-            data.pledges.forEach(p => {
-                let info = calcPledge(p);
-                totalPledgeLoan += p.amount;
-                let dateStyle = info.isExpireWarning ? 'color:red;font-weight:bold' : '';
-                pledgeHtml += `<div class="list-item"><div><div class="item-main">質押借款</div><div class="item-sub" style="${dateStyle}">${info.days}天 | 息 $${fmt(info.interest, false)}</div></div>
-                    <div class="item-right"><div class="item-main text-red">-$${fmt(p.amount)}</div><button style="font-size:0.7rem;padding:4px;" onclick="deleteItem('pledge', ${p.id})">刪除</button></div></div>`;
-            });
-            document.getElementById('pledgeList').innerHTML = pledgeHtml;
-            totalDebt += totalPledgeLoan;
-
-            let totalAssets = data.cashTwd + cashUsdToTwd + twVal + usValTwd;
-            let netWorth = totalAssets - totalDebt;
-            let leverage = netWorth > 0 ? (totalAssets / netWorth).toFixed(2) : "∞";
-
-            document.getElementById('dashNetWorth').innerText = fmt(netWorth);
-            document.getElementById('dashAssets').innerText = fmt(totalAssets);
-            document.getElementById('dashDebts').innerText = fmt(totalDebt);
-            document.getElementById('dashLeverage').innerText = leverage + "x";
-
-            let statusBar = document.getElementById('stickyStatusBar');
-            let rateLabel = document.getElementById('statusLabel');
-            let rateDisplay = document.getElementById('disp_maintRate');
-            
-            if(totalPledgeLoan > 0) {
-                let rate = (totalCollateralVal / totalPledgeLoan) * 100;
-                rateDisplay.innerText = rate.toFixed(2) + "%";
-                statusBar.className = 'status-bar'; 
-                if(rate < 160) {
-                    statusBar.classList.add('status-danger');
-                    rateLabel.innerText = "🚨 追繳危險";
-                } else if (rate < 180) {
-                    statusBar.classList.add('status-warn');
-                    rateLabel.innerText = "⚠️ 注意水位";
-                } else {
-                    statusBar.classList.add('status-safe');
-                    rateLabel.innerText = "✅ 安全範圍";
-                }
-            } else {
-                rateDisplay.innerText = "--%";
-                rateLabel.innerText = "未啟用質押";
-                statusBar.className = 'status-bar status-neutral';
-            }
-        }
-
-        // --- Modals (Keep previous implementations) ---
-        function openPriceModal() {
-            let inv = getInventory();
-            let container = document.getElementById('priceInputList');
-            container.innerHTML = '';
-            for(let sym in inv) {
-                if(inv[sym].qty > 0) {
-                    let currentP = data.prices[sym] || inv[sym].cost;
-                    let currencyLabel = inv[sym].type === 'us' ? 'USD' : 'TWD';
-                    container.innerHTML += `<div class="price-row"><span class="price-label">${sym} (${currencyLabel})</span><input type="number" class="price-input price-update" id="price_${sym}" value="${currentP}" step="0.01"></div>`;
-                }
-            }
-            document.getElementById('priceModal').style.display = 'flex';
-        }
-
-        function savePrices() {
-            document.querySelectorAll('.price-update').forEach(input => {
-                let sym = input.id.split('_')[1];
-                let val = parseFloat(input.value);
-                if(!isNaN(val)) data.prices[sym] = val;
-            });
-            saveData();
-            closeModal('priceModal');
-        }
-
-        function openCollateralModal() {
-            let inv = getInventory();
-            let container = document.getElementById('collateralInputList');
-            container.innerHTML = '';
-            let hasStock = false;
-            for(let sym in inv) {
-                if(inv[sym].qty > 0) {
-                    hasStock = true;
-                    let currentPledged = data.pledgedShares[sym] || 0;
-                    container.innerHTML += `
-                        <div class="price-row">
-                            <div>
-                                <div class="price-label">${sym}</div>
-                                <div class="pledge-desc">持有 ${inv[sym].qty} 股</div>
-                            </div>
-                            <div class="pledge-input-group">
-                                <input type="number" class="price-input pledge-update" id="pledge_${sym}" value="${currentPledged}" placeholder="0">
-                                <div class="pledge-desc">質押股數</div>
-                            </div>
-                        </div>`;
-                }
-            }
-            if(!hasStock) container.innerHTML = '<div style="text-align:center;color:#999">無庫存可設定</div>';
-            document.getElementById('collateralModal').style.display = 'flex';
-        }
-
-        function saveCollateral() {
-            document.querySelectorAll('.pledge-update').forEach(input => {
-                let sym = input.id.split('_')[1];
-                let val = parseFloat(input.value);
-                if(!isNaN(val) && val > 0) data.pledgedShares[sym] = val;
-                else delete data.pledgedShares[sym];
-            });
-            saveData();
-            closeModal('collateralModal');
-        }
-
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        function switchPage(pageId, btn) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + pageId).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            btn.classList.add('active');
         }
     </script>
 </body>
